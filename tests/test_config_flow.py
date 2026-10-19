@@ -5,6 +5,7 @@ from __future__ import annotations
 from homeassistant import config_entries
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
+from homeassistant.helpers import entity_registry as er
 
 from custom_components.scene_cycler.const import (
     CONF_AREA,
@@ -35,6 +36,17 @@ def suggested(result, key: str):
 
 
 async def test_user_flow(hass: HomeAssistant, area: str) -> None:
+    # Lighting with "LED" in its name, which isn't an indicator.
+    curtain = er.async_get(hass).async_get_or_create(
+        "light",
+        "test",
+        "curtain",
+        suggested_object_id="led_curtain",
+        original_name="LED Curtain",
+    )
+    er.async_get(hass).async_update_entity(curtain.entity_id, area_id=area)
+    hass.states.async_set(curtain.entity_id, "off", {"friendly_name": "LED Curtain"})
+
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )

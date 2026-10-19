@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.3
+
+### Fixed
+
+- **Lights like "LED Curtain" are no longer suggested for exclusion.** When a room is set up, lights that look like indicators are pre-selected to leave out of the room. Any name containing "LED" counted, so an LED curtain or strip was pre-selected too. Now only names ending in LED, backlight or indicator count ("Switch LED", "Button Backlight").
+
 ## 0.1.2
 
 ### Fixed

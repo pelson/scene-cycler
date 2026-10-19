@@ -39,8 +39,10 @@ SETTLE = timedelta(seconds=2)
 # the previous scene and send the next press from the wrong place.
 APPLY_TIMEOUT = timedelta(seconds=10)
 
-# Light names that are usually indicators rather than room lighting. Lights
-# matching these are pre-selected for exclusion when a room is set up.
+# Light names ending in one of these words are usually indicators rather than
+# room lighting ("Switch LED", "Button Backlight"), so they're pre-selected for
+# exclusion when a room is set up. Only the last word counts: "LED Curtain" or
+# "LED Strip" is lighting.
 INDICATOR_WORDS = ("led", "backlight", "indicator")
 
 STORAGE_VERSION = 1

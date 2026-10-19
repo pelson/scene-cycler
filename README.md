@@ -42,7 +42,7 @@ Each action targets a room's scene select, its device, or its area once the devi
 
 ## How it works
 
-**The room's lights** are the lights in the room's area (set directly or through their device), with light groups expanded to their members, minus the lights you exclude. Indicator LEDs and backlights in the area are suggested for exclusion when you set the room up.
+**The room's lights** are the lights in the room's area (set directly or through their device), with light groups expanded to their members, minus the lights you exclude. When you set the room up, lights whose names end in LED, backlight or indicator (such as "Switch LED") are suggested for exclusion.
 
 **Scenes** are ordinary Home Assistant scenes made in the scene editor (or `scenes.yaml`). Scene Cycler reads what each one sets the lights to. A scene fully describes the room: room lights it doesn't set are turned off when it's applied, and must be off for the room to count as showing it.
 

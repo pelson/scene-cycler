@@ -22,7 +22,7 @@ SCENE_PLATFORM = "homeassistant_scene"
 # use `entity_id`, Zigbee2MQTT groups `group_entities`.
 GROUP_ATTRIBUTES = (ATTR_ENTITY_ID, "group_entities")
 
-_INDICATOR = re.compile(rf"\b({'|'.join(INDICATOR_WORDS)})\b", re.IGNORECASE)
+_INDICATOR = re.compile(rf"\b({'|'.join(INDICATOR_WORDS)})\s*$", re.IGNORECASE)
 
 
 def scene_states(hass: HomeAssistant, scene_id: str) -> dict[str, State] | None:
@@ -101,7 +101,7 @@ def room_lights(hass: HomeAssistant, area_id: str, excluded: list[str]) -> set[s
 
 
 def suggested_excludes(hass: HomeAssistant, area_id: str) -> list[str]:
-    """Lights in the area that look like indicators (LEDs, backlights) by name."""
+    """Lights in the area whose names end like an indicator's ("... LED", "... Backlight")."""
     entity_registry = er.async_get(hass)
     suggestions = []
     for entity_id in expand(hass, area_lights(hass, area_id)):
