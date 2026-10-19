@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 from freezegun.api import FrozenDateTimeFactory
-from homeassistant.core import HomeAssistant
+from homeassistant.const import EVENT_HOMEASSISTANT_STARTED
+from homeassistant.core import CoreState, HomeAssistant
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import entity_registry as er, issue_registry as ir
 import pytest
@@ -350,3 +351,21 @@ async def test_unreadable_scene_is_still_applied_alone(
     light_calls.clear()
     await call(hass, "previous")  # scene.gone
     assert light_calls == []  # nothing turned off alongside it
+
+
+async def test_reload_after_starting_before_home_assistant_is_up(
+    hass: HomeAssistant, area: str, caplog: pytest.LogCaptureFixture
+) -> None:
+    # Set up while starting, then reloaded once running (e.g. an options
+    # change): the start listener has already gone by then.
+    hass.set_state(CoreState.starting)
+    entry = await setup_room(hass, area)
+
+    hass.set_state(CoreState.running)
+    hass.bus.async_fire(EVENT_HOMEASSISTANT_STARTED)
+    await hass.async_block_till_done()
+    assert hass.states.get(SCENE).state == "Off"
+
+    await hass.config_entries.async_reload(entry.entry_id)
+    await hass.async_block_till_done()
+    assert "Unable to remove unknown job listener" not in caplog.text

@@ -10,7 +10,6 @@ from homeassistant.components.light import ATTR_TRANSITION
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     ATTR_ENTITY_ID,
-    EVENT_HOMEASSISTANT_STARTED,
     EVENT_STATE_CHANGED,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
@@ -34,6 +33,7 @@ from homeassistant.helpers import (
     issue_registry as ir,
 )
 from homeassistant.helpers.event import async_call_later
+from homeassistant.helpers.start import async_at_started
 from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 
@@ -119,14 +119,9 @@ class Room:
                 dr.EVENT_DEVICE_REGISTRY_UPDATED, self._on_change
             ),
         ]
-        if self.hass.state is CoreState.running:
-            self._evaluate()
-        else:
-            self._unsubs.append(
-                self.hass.bus.async_listen_once(
-                    EVENT_HOMEASSISTANT_STARTED, self._on_change
-                )
-            )
+        # Runs straight away if Home Assistant is already up. Its remover is
+        # safe to call after it's fired, unlike a bus listen_once's.
+        self._unsubs.append(async_at_started(self.hass, self._on_started))
 
     @callback
     def async_stop(self) -> None:
@@ -288,6 +283,10 @@ class Room:
     @callback
     def _on_state_changed(self, event: Event[EventStateChangedData]) -> None:
         self._schedule_evaluate(dt_util.utcnow() + SETTLE)
+
+    @callback
+    def _on_started(self, hass: HomeAssistant) -> None:
+        self._evaluate()
 
     @callback
     def _on_change(self, event: Event | None = None) -> None:
