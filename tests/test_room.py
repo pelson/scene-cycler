@@ -8,8 +8,10 @@ from homeassistant.core import CoreState, HomeAssistant
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import entity_registry as er, issue_registry as ir
 import pytest
+from pytest_homeassistant_custom_component.common import async_fire_time_changed
 
 from custom_components.scene_cycler.const import (
+    APPLY_TIMEOUT,
     CONF_DEFAULT_SCENE,
     CONF_FOLLOW_DEFAULT,
     CONF_INCLUDE_OFF,
@@ -369,3 +371,71 @@ async def test_reload_after_starting_before_home_assistant_is_up(
     await hass.config_entries.async_reload(entry.entry_id)
     await hass.async_block_till_done()
     assert "Unable to remove unknown job listener" not in caplog.text
+
+
+def lights_ignore_commands(hass: HomeAssistant) -> None:
+    """Make the lights slow: commands are accepted but nothing changes yet."""
+
+    async def ignore(call) -> None:
+        pass
+
+    hass.services.async_register("light", "turn_on", ignore)
+    hass.services.async_register("light", "turn_off", ignore)
+
+
+async def test_slow_lights_dont_undo_a_press(
+    hass: HomeAssistant, area: str, freezer: FrozenDateTimeFactory
+) -> None:
+    await setup_room(hass, area)
+    await call(hass, "apply_default")
+    await settle(hass, freezer)
+    lights_ignore_commands(hass)
+
+    await call(hass, "next")  # Evening, but the lights haven't moved yet
+    await settle(hass, freezer)
+    assert hass.states.get(SCENE).state == "Evening"
+
+    # The next press steps on from Evening, not from Bright again.
+    await call(hass, "next")
+    assert hass.states.get(SCENE).state == "Night"
+
+    # The lights catch up.
+    hass.states.async_set(CEILING, "off")
+    hass.states.async_set(LAMP, "on", {"brightness": 10})
+    await settle(hass, freezer)
+    assert hass.states.get(SCENE).state == "Night"
+    assert hass.states.get(MODIFIED).state == "off"
+
+
+async def test_lights_that_never_follow_show_what_they_are_after_the_wait(
+    hass: HomeAssistant, area: str, freezer: FrozenDateTimeFactory
+) -> None:
+    await setup_room(hass, area)
+    await call(hass, "apply_default")
+    await settle(hass, freezer)
+    lights_ignore_commands(hass)
+
+    await call(hass, "next")
+    await settle(hass, freezer)
+    assert hass.states.get(SCENE).state == "Evening"
+
+    freezer.tick(APPLY_TIMEOUT)
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
+    assert hass.states.get(SCENE).state == "Bright"
+
+
+async def test_outside_change_during_the_wait_shows_once_it_ends(
+    hass: HomeAssistant, area: str, freezer: FrozenDateTimeFactory
+) -> None:
+    await setup_room(hass, area)
+    await call(hass, "apply_default")
+    # Someone changes the lamp before the scene has been confirmed.
+    hass.states.async_set(LAMP, "on", {"brightness": 120})
+    await settle(hass, freezer)
+    assert hass.states.get(SCENE).state == "Bright"
+
+    freezer.tick(APPLY_TIMEOUT)
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
+    assert hass.states.get(SCENE).state == "Manual"

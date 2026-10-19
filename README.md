@@ -48,7 +48,7 @@ Each action targets a room's scene select, its device, or its area once the devi
 
 **Cycling** goes through the list in order and wraps round. From `Off` or `Manual`, it starts at the default. With *Include off in the cycle*, off comes after a full lap, just before the default would come round again. For example, with scenes `[bright, evening, dimmed]` and default `evening`: evening → dimmed → bright → off → evening.
 
-**Detecting changes.** Whenever one of the room's lights changes, Scene Cycler waits for things to settle (2 s, plus any transition it started), then compares the lights to the scenes. It compares on/off and brightness, within the room's brightness tolerance (5% by default); colour isn't compared.
+**Detecting changes.** Whenever one of the room's lights changes, Scene Cycler waits for things to settle (2 s, plus any transition it started), then compares the lights to the scenes. After it applies a scene itself, it keeps showing that scene until the lights match it, for up to 10 s (plus any transition). Slow lights therefore don't make a press look like it didn't happen, and quick repeated presses step through the scenes in order. It compares on/off and brightness, within the room's brightness tolerance (5% by default); colour isn't compared.
 
 - If the lights still match the scene the room was showing, nothing changes.
 - If they all match another of the room's scenes, the room shows that one. So an automation that calls `scene.turn_on` directly keeps the room correct.

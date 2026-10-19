@@ -38,6 +38,7 @@ from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 
 from .const import (
+    APPLY_TIMEOUT,
     CONF_AREA,
     CONF_BRIGHTNESS_TOLERANCE,
     CONF_DEFAULT_SCENE,
@@ -91,6 +92,10 @@ class Room:
         self._unsubs: list[CALLBACK_TYPE] = []
         self._watched: set[str] = set()
         self._hold_until: datetime | None = None
+        # The scene (or OFF) the integration last applied, until the lights
+        # match it or _applied_until passes.
+        self._applied: str | None = None
+        self._applied_until: datetime | None = None
         self._cancel_evaluate: CALLBACK_TYPE | None = None
 
     # Lifecycle
@@ -268,9 +273,11 @@ class Room:
         """Show what's just been applied, and hold off comparing until it lands."""
         self.current = current
         self.differences = []
-        self._hold_until = (
-            dt_util.utcnow() + SETTLE + timedelta(seconds=transition or 0)
-        )
+        now = dt_util.utcnow()
+        fade = timedelta(seconds=transition or 0)
+        self._hold_until = now + SETTLE + fade
+        self._applied = current
+        self._applied_until = now + APPLY_TIMEOUT + fade
         self._schedule_evaluate(self._hold_until)
         self._notify()
 
@@ -316,8 +323,17 @@ class Room:
             and state.state not in (STATE_UNAVAILABLE, STATE_UNKNOWN)
         ]
         if known:
-            current, self.differences = self._match(known)
+            current, differences = self._match(known)
+            if self._applied is not None and current != self._applied:
+                if dt_util.utcnow() < self._applied_until:
+                    # Not there yet: keep showing what was applied, and look
+                    # again when the wait runs out if nothing changes first.
+                    self._schedule_evaluate(self._applied_until)
+                    self._notify()
+                    return
+            self._applied = self._applied_until = None
             self.current = current
+            self.differences = differences
             if current not in (OFF, MANUAL):
                 self.last_scene = current
         self._notify()

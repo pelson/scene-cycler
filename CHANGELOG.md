@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.2
+
+### Fixed
+
+- **Pressing next quickly no longer repeats or skips scenes when the lights are slow.** Scene Cycler compared the lights 2 s after applying a scene. Lights on a busy Zigbee network can take longer than that to respond, so the room went back to showing the previous scene and the next press stepped from there. For example, Desktop was applied twice instead of Desktop then Main. It now keeps showing the scene it applied until the lights match it, for up to 10 s. Lights that never follow still show as `Manual` (or whatever they match) once that time is up.
+
 ## 0.1.1
 
 ### Fixed
