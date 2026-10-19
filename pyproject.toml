@@ -1,0 +1,32 @@
+[project]
+name = "scene-cycler"
+version = "0.1.0"
+description = "Home Assistant integration that cycles rooms through lighting scenes and notices when the lights are changed outside it"
+requires-python = ">=3.14"
+license = "MIT"
+
+[dependency-groups]
+dev = [
+    "pytest-homeassistant-custom-component",
+    "ruff>=0.17.1",
+]
+
+[tool.pytest.ini_options]
+pythonpath = [".", "tests"]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+
+[tool.ruff]
+line-length = 88
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP"]
+ignore = ["E501"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["custom_components"]
+known-local-folder = ["conftest"]
+force-sort-within-sections = true
+combine-as-imports = true
+known-third-party = ["homeassistant"]

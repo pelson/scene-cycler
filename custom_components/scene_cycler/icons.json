@@ -1,0 +1,26 @@
+{
+  "entity": {
+    "binary_sensor": {
+      "modified": { "default": "mdi:lightbulb-on-outline", "state": { "on": "mdi:lightbulb-alert-outline" } }
+    },
+    "button": {
+      "next": { "default": "mdi:skip-next" },
+      "previous": { "default": "mdi:skip-previous" },
+      "apply_default": { "default": "mdi:home-lightbulb-outline" }
+    },
+    "select": {
+      "scene": { "default": "mdi:palette-outline" },
+      "default_scene": { "default": "mdi:palette-swatch-outline" }
+    },
+    "switch": {
+      "lights": { "default": "mdi:lightbulb-group-off-outline", "state": { "on": "mdi:lightbulb-group" } }
+    }
+  },
+  "services": {
+    "next": { "service": "mdi:skip-next" },
+    "previous": { "service": "mdi:skip-previous" },
+    "apply_default": { "service": "mdi:home-lightbulb-outline" },
+    "turn_off": { "service": "mdi:lightbulb-group-off-outline" },
+    "set_default": { "service": "mdi:palette-swatch-outline" }
+  }
+}

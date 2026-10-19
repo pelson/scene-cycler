@@ -1,0 +1,138 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Add a room",
+        "description": "Pick the room's area and the scenes to cycle through, in order. Only scenes made in the scene editor (or scenes.yaml) can be used, because the integration reads what they set the lights to.",
+        "data": {
+          "name": "Name",
+          "area": "Area",
+          "scenes": "Scenes to cycle through",
+          "off_scene": "Off scene",
+          "include_off": "Include off in the cycle",
+          "follow_default": "Follow default changes"
+        },
+        "data_description": {
+          "area": "The room's lights are this area's lights, with light groups expanded to their members.",
+          "scenes": "Next and previous step through these in this order, wrapping round.",
+          "off_scene": "Applied to turn the room off. Leave empty to turn off all of the room's lights instead. It can't also be one of the scenes to cycle through.",
+          "include_off": "Off comes after a full lap of the scenes, just before the default comes round again. Useful for rooms with a single button.",
+          "follow_default": "When the default changes while the room is showing the old default, switch to the new one straight away. Otherwise a new default only takes effect the next time it's applied."
+        }
+      },
+      "room": {
+        "title": "Default and lights",
+        "description": "The lights in {area}, apart from any excluded here, make up the room. Room lights that a scene doesn't set are turned off when it's applied, and must be off for the room to count as showing it.",
+        "data": {
+          "default_scene": "Default scene",
+          "excluded_lights": "Lights to leave out",
+          "brightness_tolerance": "Brightness tolerance"
+        },
+        "data_description": {
+          "default_scene": "Applied when the room is turned on, and by the first press after the lights were changed outside a scene. Automations can change it.",
+          "excluded_lights": "Lights in the area that aren't room lighting, such as indicator LEDs. Ones that look like indicators are suggested.",
+          "brightness_tolerance": "How far a light's brightness can be from the scene's and still count as matching."
+        }
+      }
+    },
+    "error": {
+      "no_scenes": "Pick at least one scene.",
+      "off_scene_in_cycle": "The off scene can't also be one of the scenes to cycle through."
+    },
+    "abort": {
+      "already_configured": "This area already has a room."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Scenes",
+        "data": {
+          "scenes": "Scenes to cycle through",
+          "off_scene": "Off scene",
+          "include_off": "Include off in the cycle",
+          "follow_default": "Follow default changes"
+        },
+        "data_description": {
+          "scenes": "Next and previous step through these in this order, wrapping round.",
+          "off_scene": "Applied to turn the room off. Leave empty to turn off all of the room's lights instead. It can't also be one of the scenes to cycle through.",
+          "include_off": "Off comes after a full lap of the scenes, just before the default comes round again. Useful for rooms with a single button.",
+          "follow_default": "When the default changes while the room is showing the old default, switch to the new one straight away. Otherwise a new default only takes effect the next time it's applied."
+        }
+      },
+      "room": {
+        "title": "Default and lights",
+        "description": "The lights in {area}, apart from any excluded here, make up the room. Room lights that a scene doesn't set are turned off when it's applied, and must be off for the room to count as showing it.",
+        "data": {
+          "default_scene": "Default scene",
+          "excluded_lights": "Lights to leave out",
+          "brightness_tolerance": "Brightness tolerance"
+        },
+        "data_description": {
+          "default_scene": "Saving a different default here replaces one set by an automation.",
+          "excluded_lights": "Lights in the area that aren't room lighting, such as indicator LEDs.",
+          "brightness_tolerance": "How far a light's brightness can be from the scene's and still count as matching."
+        }
+      }
+    },
+    "error": {
+      "no_scenes": "Pick at least one scene.",
+      "off_scene_in_cycle": "The off scene can't also be one of the scenes to cycle through."
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "modified": { "name": "Modified" }
+    },
+    "button": {
+      "next": { "name": "Next scene" },
+      "previous": { "name": "Previous scene" },
+      "apply_default": { "name": "Apply default" }
+    },
+    "select": {
+      "scene": { "name": "Scene" },
+      "default_scene": { "name": "Default scene" }
+    },
+    "switch": {
+      "lights": { "name": "Lights" }
+    }
+  },
+  "exceptions": {
+    "scene_not_in_room": { "message": "{scene} isn't one of {room}'s scenes." },
+    "unknown_option": { "message": "{option} isn't one of the room's scenes." },
+    "cannot_select_manual": { "message": "Manual shows that the lights were changed outside a scene; it can't be chosen." }
+  },
+  "issues": {
+    "unreadable_scenes": {
+      "title": "Scene Cycler can't read {room}'s scenes",
+      "description": "These scenes either no longer exist or their settings couldn't be read: {scenes}.\n\nIf they were deleted or renamed, update the room's options. If they still exist, a Home Assistant update may have changed how scenes are stored, so Scene Cycler needs an update. Until then the room can still cycle, but it can't tell which scene is showing."
+    }
+  },
+  "services": {
+    "next": {
+      "name": "Next scene",
+      "description": "Steps the room to its next scene. From off, or after the lights were changed outside a scene, applies the default.",
+      "fields": { "transition": { "name": "Transition", "description": "Fade time." } }
+    },
+    "previous": {
+      "name": "Previous scene",
+      "description": "Steps the room to its previous scene. From off, or after the lights were changed outside a scene, applies the default.",
+      "fields": { "transition": { "name": "Transition", "description": "Fade time." } }
+    },
+    "apply_default": {
+      "name": "Apply default",
+      "description": "Applies the room's default scene.",
+      "fields": { "transition": { "name": "Transition", "description": "Fade time." } }
+    },
+    "turn_off": {
+      "name": "Turn off",
+      "description": "Applies the room's off scene, or turns off all its lights if it hasn't got one.",
+      "fields": { "transition": { "name": "Transition", "description": "Fade time." } }
+    },
+    "set_default": {
+      "name": "Set default",
+      "description": "Changes the room's default scene.",
+      "fields": { "scene": { "name": "Scene", "description": "One of the room's scenes." } }
+    }
+  }
+}

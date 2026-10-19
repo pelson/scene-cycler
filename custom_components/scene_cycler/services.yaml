@@ -1,0 +1,27 @@
+next: &transition_service
+  target:
+    entity:
+      integration: scene_cycler
+      domain: select
+  fields:
+    transition:
+      selector:
+        number:
+          min: 0
+          max: 300
+          step: 0.5
+          unit_of_measurement: seconds
+previous: *transition_service
+apply_default: *transition_service
+turn_off: *transition_service
+set_default:
+  target:
+    entity:
+      integration: scene_cycler
+      domain: select
+  fields:
+    scene:
+      required: true
+      selector:
+        entity:
+          domain: scene
