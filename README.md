@@ -44,7 +44,7 @@ Each action targets a room's scene select, its device, or its area once the devi
 
 **The room's lights** are the lights in the room's area (set directly or through their device), with light groups expanded to their members, minus the lights you exclude. When you set the room up, lights whose names end in LED, backlight or indicator (such as "Switch LED") are suggested for exclusion.
 
-**Scenes** are ordinary Home Assistant scenes made in the scene editor (or `scenes.yaml`). Scene Cycler reads what each one sets the lights to. A scene fully describes the room: room lights it doesn't set are turned off when it's applied, and must be off for the room to count as showing it.
+**Scenes** are ordinary Home Assistant scenes made in the scene editor (or `scenes.yaml`). Scene Cycler reads what each one sets the lights to. A scene fully describes the room: room lights it doesn't set are turned off when it's applied, and must be off for the room to count as showing it. A light the scene saved as unavailable (it was offline when the scene was saved) is left alone: Home Assistant doesn't change it when applying the scene, so Scene Cycler neither turns it off nor compares it.
 
 **Cycling** goes through the list in order and wraps round. From `Off` or `Manual`, it starts at the default. With *Include off in the cycle*, off comes after a full lap, just before the default would come round again. For example, with scenes `[bright, evening, dimmed]` and default `evening`: evening → dimmed → bright → off → evening.
 

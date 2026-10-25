@@ -38,6 +38,7 @@ BRIGHT = "scene.bright"
 EVENING = "scene.evening"
 NIGHT = "scene.night"
 SLEEP = "scene.sleep"  # off scene: everything off but the lamp at 1
+STALE = "scene.stale"  # saved while the ceiling was unavailable
 
 
 @pytest.fixture(autouse=True)
@@ -120,6 +121,14 @@ async def area(hass: HomeAssistant, light_calls) -> str:
                     "id": "night",
                     "name": "Night",
                     "entities": {LAMP: {"state": "on", "brightness": 10}},
+                },
+                {
+                    "id": "stale",
+                    "name": "Stale",
+                    "entities": {
+                        CEILING: {"state": "unavailable"},
+                        LAMP: {"state": "on", "brightness": 80},
+                    },
                 },
                 {
                     "id": "sleep",

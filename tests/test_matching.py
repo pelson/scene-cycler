@@ -71,6 +71,20 @@ def test_scene_targets_expands_groups_and_skips_other_domains() -> None:
     }
 
 
+def test_unavailable_target_is_unset() -> None:
+    states = {
+        "light.a": State("light.a", "unavailable"),
+        "light.b": State("light.b", "unknown"),
+        "light.c": State("light.c", "on", {"brightness": 10}),
+    }
+    targets = scene_targets(states, lambda e: [])
+    assert targets == {"light.a": None, "light.b": None, "light.c": Target(True, 10)}
+    # An unset room light isn't treated as unlisted (off).
+    assert room_targets(targets, ["light.a", "light.d"])["light.a"] is None
+    # light.a is on but unset, so not a difference; light.c is missing, so skipped.
+    assert differences(targets, {"light.a": State("light.a", "on")}.get, 5) == []
+
+
 def test_room_lights_not_in_scene_are_off() -> None:
     targets = room_targets({"light.a": Target(True, 10)}, ["light.a", "light.b"])
     assert targets == {"light.a": Target(True, 10), "light.b": OFF_TARGET}

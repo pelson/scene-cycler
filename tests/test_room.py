@@ -28,6 +28,7 @@ from conftest import (
     LED,
     NIGHT,
     SLEEP,
+    STALE,
     settle,
     setup_room,
 )
@@ -120,6 +121,22 @@ async def test_next_cycles_and_turns_off_unset_lights(
 
     await settle(hass, freezer)
     assert hass.states.get(SCENE).state == "Night"
+    assert hass.states.get(MODIFIED).state == "off"
+
+
+async def test_unavailable_target_is_left_alone(
+    hass: HomeAssistant, area: str, freezer: FrozenDateTimeFactory
+) -> None:
+    await setup_room(hass, area, **{CONF_SCENES: [BRIGHT, STALE]})
+    await call(hass, "next")  # Bright: the ceiling on at 255
+    await call(hass, "next")  # Stale
+    # Stale was saved while the ceiling was unavailable: it isn't turned off.
+    assert lights(hass)[CEILING] == ("on", 255)
+
+    # Past the wait for slow lights, so the room really compares.
+    freezer.tick(APPLY_TIMEOUT)
+    await settle(hass, freezer)
+    assert hass.states.get(SCENE).state == "Stale"
     assert hass.states.get(MODIFIED).state == "off"
 
 

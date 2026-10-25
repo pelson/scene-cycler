@@ -358,12 +358,12 @@ class Room:
         targets = self._targets(scene)
         return targets is not None and not self._differences(targets)
 
-    def _differences(self, targets: dict[str, Target]) -> list[str]:
+    def _differences(self, targets: dict[str, Target | None]) -> list[str]:
         return differences(
             room_targets(targets, self.lights), self.hass.states.get, self.tolerance
         )
 
-    def _targets(self, scene: str) -> dict[str, Target] | None:
+    def _targets(self, scene: str) -> dict[str, Target | None] | None:
         if (states := scene_states(self.hass, scene)) is None:
             return None
         return scene_targets(states, lambda e: group_members(self.hass, e))

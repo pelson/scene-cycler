@@ -8,7 +8,7 @@ from __future__ import annotations
 from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 
-from homeassistant.const import STATE_ON, STATE_UNAVAILABLE, STATE_UNKNOWN
+from homeassistant.const import STATE_OFF, STATE_ON, STATE_UNAVAILABLE, STATE_UNKNOWN
 from homeassistant.core import State, split_entity_id
 
 from .const import OFF
@@ -29,14 +29,17 @@ OFF_TARGET = Target(on=False)
 
 def scene_targets(
     states: Mapping[str, State], members: Callable[[str], list[str]]
-) -> dict[str, Target]:
+) -> dict[str, Target | None]:
     """Targets for each light in a scene, with light groups expanded.
 
     A group's target applies to each of its members, unless the scene also
-    sets that member itself.
+    sets that member itself. A light saved in a state that isn't on or off
+    (it was unavailable when the scene was saved) has target None: Home
+    Assistant leaves it alone when applying the scene, so it's not compared
+    and not turned off either.
     """
-    explicit: dict[str, Target] = {}
-    from_groups: dict[str, Target] = {}
+    explicit: dict[str, Target | None] = {}
+    from_groups: dict[str, Target | None] = {}
     for entity_id, state in states.items():
         if split_entity_id(entity_id)[0] != LIGHT:
             continue
@@ -49,9 +52,11 @@ def scene_targets(
     return from_groups | explicit
 
 
-def _target(state: State) -> Target:
-    if state.state != STATE_ON:
+def _target(state: State) -> Target | None:
+    if state.state == STATE_OFF:
         return OFF_TARGET
+    if state.state != STATE_ON:
+        return None
     attributes = state.attributes
     if (brightness := attributes.get("brightness")) is not None:
         return Target(on=True, brightness=round(float(brightness)))
@@ -61,14 +66,14 @@ def _target(state: State) -> Target:
 
 
 def room_targets(
-    targets: Mapping[str, Target], room_lights: Iterable[str]
-) -> dict[str, Target]:
+    targets: Mapping[str, Target | None], room_lights: Iterable[str]
+) -> dict[str, Target | None]:
     """A scene's targets, with room lights it doesn't mention treated as off."""
     return {light: OFF_TARGET for light in room_lights} | dict(targets)
 
 
 def differences(
-    targets: Mapping[str, Target],
+    targets: Mapping[str, Target | None],
     get_state: Callable[[str], State | None],
     tolerance_pct: float,
 ) -> list[str]:
@@ -76,11 +81,13 @@ def differences(
 
     Lights that are missing, unavailable or unknown are skipped: they can't
     be compared, and a bulb dropping off the network isn't someone changing
-    the room.
+    the room. So are lights the scene leaves unset (target None).
     """
     tolerance = tolerance_pct * 255 / 100
     mismatched = []
     for entity_id, target in targets.items():
+        if target is None:
+            continue
         state = get_state(entity_id)
         if state is None or state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
             continue
