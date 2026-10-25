@@ -110,13 +110,19 @@ def cycle_step(
     current: str | None,
     include_off: bool,
     reverse: bool = False,
+    wrap: bool = True,
 ) -> str:
     """The scene (or OFF) a press of next/previous should go to.
 
     The cycle runs through the list in order, wrapping round. It starts from
     the default, so when off is part of the cycle it comes after a full lap:
     just before the default would come round again.
+
+    Without wrapping, the list is a ladder for up/down buttons: the ends stay
+    put, and off (if in the cycle) is below the first scene.
     """
+    if not wrap:
+        return _ladder_step(scenes, default, current, include_off, reverse)
     if current not in scenes:
         # Off, Manual or not yet known. Going backwards from off with off in
         # the cycle continues the lap, which ends with the scene before the
@@ -134,3 +140,23 @@ def cycle_step(
     if include_off and following == default:
         return OFF
     return following
+
+
+def _ladder_step(
+    scenes: list[str],
+    default: str,
+    current: str | None,
+    include_off: bool,
+    reverse: bool,
+) -> str:
+    if current == OFF:
+        return OFF if reverse else scenes[0]
+    if current not in scenes:
+        # Manual or not yet known.
+        return default
+    index = scenes.index(current)
+    if not reverse:
+        return scenes[min(index + 1, len(scenes) - 1)]
+    if index > 0:
+        return scenes[index - 1]
+    return OFF if include_off else scenes[0]

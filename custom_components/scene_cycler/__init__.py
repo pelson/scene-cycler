@@ -8,7 +8,8 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.typing import ConfigType
 
-from .const import DOMAIN
+from .config_flow import SceneCyclerConfigFlow
+from .const import DEFAULT_OPTIONS, DOMAIN
 from .room import Room
 from .services import async_setup_services
 
@@ -31,6 +32,21 @@ async def async_setup_entry(hass: HomeAssistant, entry: SceneCyclerConfigEntry) 
     entry.async_on_unload(room.async_stop)
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    return True
+
+
+async def async_migrate_entry(
+    hass: HomeAssistant, entry: SceneCyclerConfigEntry
+) -> bool:
+    """Give entries from older versions the defaults of options added since."""
+    if entry.version > 1:
+        return False
+    if entry.minor_version < SceneCyclerConfigFlow.MINOR_VERSION:
+        hass.config_entries.async_update_entry(
+            entry,
+            options={**DEFAULT_OPTIONS, **entry.options},
+            minor_version=SceneCyclerConfigFlow.MINOR_VERSION,
+        )
     return True
 
 

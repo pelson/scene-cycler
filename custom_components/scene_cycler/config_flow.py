@@ -23,6 +23,7 @@ from .const import (
     CONF_INCLUDE_OFF,
     CONF_OFF_SCENE,
     CONF_SCENES,
+    CONF_WRAP,
     DEFAULT_OPTIONS,
     DOMAIN,
 )
@@ -42,6 +43,7 @@ SCENES_SCHEMA = vol.Schema(
         ),
         vol.Optional(CONF_OFF_SCENE): selector.EntitySelector(SCENE_SELECTOR),
         vol.Required(CONF_INCLUDE_OFF): selector.BooleanSelector(),
+        vol.Required(CONF_WRAP): selector.BooleanSelector(),
         vol.Required(CONF_FOLLOW_DEFAULT): selector.BooleanSelector(),
     }
 )
@@ -95,6 +97,8 @@ def _scene_name(hass: HomeAssistant, scene: str) -> str:
 
 class SceneCyclerConfigFlow(ConfigFlow, domain=DOMAIN):
     VERSION = 1
+    # Bumped whenever an option is added; async_migrate_entry fills it in.
+    MINOR_VERSION = 2
 
     def __init__(self) -> None:
         self._data: dict[str, Any] = {}

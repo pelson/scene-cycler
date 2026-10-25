@@ -6,7 +6,9 @@ from homeassistant import config_entries
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
 from homeassistant.helpers import entity_registry as er
+from pytest_homeassistant_custom_component.common import MockConfigEntry
 
+from custom_components.scene_cycler.config_flow import SceneCyclerConfigFlow
 from custom_components.scene_cycler.const import (
     CONF_AREA,
     CONF_BRIGHTNESS_TOLERANCE,
@@ -16,6 +18,8 @@ from custom_components.scene_cycler.const import (
     CONF_INCLUDE_OFF,
     CONF_OFF_SCENE,
     CONF_SCENES,
+    CONF_WRAP,
+    DEFAULT_OPTIONS,
     DOMAIN,
 )
 
@@ -24,6 +28,7 @@ from conftest import BRIGHT, EVENING, LED, NIGHT, SLEEP, setup_room
 SCENES_INPUT = {
     CONF_SCENES: [EVENING, BRIGHT],
     CONF_INCLUDE_OFF: False,
+    CONF_WRAP: True,
     CONF_FOLLOW_DEFAULT: True,
 }
 
@@ -110,6 +115,26 @@ async def test_one_room_per_area(hass: HomeAssistant, area: str) -> None:
     )
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
+
+
+async def test_migration_fills_new_options(hass: HomeAssistant, area: str) -> None:
+    """An entry from before an option existed gets its default."""
+    old_options = {k: v for k, v in DEFAULT_OPTIONS.items() if k != CONF_WRAP}
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="Living Room",
+        data={CONF_AREA: area},
+        options={**old_options, CONF_SCENES: [BRIGHT], CONF_DEFAULT_SCENE: BRIGHT},
+        unique_id=area,
+        minor_version=1,
+    )
+    entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+
+    assert entry.options[CONF_WRAP] is True
+    assert entry.minor_version == SceneCyclerConfigFlow.MINOR_VERSION
+    assert hass.states.get("select.living_room_scene") is not None
 
 
 async def test_options_flow_clears_off_scene_and_excludes(

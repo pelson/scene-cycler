@@ -47,6 +47,7 @@ from .const import (
     CONF_INCLUDE_OFF,
     CONF_OFF_SCENE,
     CONF_SCENES,
+    CONF_WRAP,
     DOMAIN,
     EVENT_SCENE_APPLIED,
     MANUAL,
@@ -79,6 +80,7 @@ class Room:
         self.scenes: list[str] = list(options[CONF_SCENES])
         self.off_scene: str | None = options.get(CONF_OFF_SCENE)
         self.include_off: bool = options[CONF_INCLUDE_OFF]
+        self.wrap: bool = options[CONF_WRAP]
         self.follow_default: bool = options[CONF_FOLLOW_DEFAULT]
         self.excluded: list[str] = list(options[CONF_EXCLUDED_LIGHTS])
         self.tolerance: float = options[CONF_BRIGHTNESS_TOLERANCE]
@@ -261,7 +263,12 @@ class Room:
         self, reverse: bool, transition: float | None, context: Context | None
     ) -> None:
         target = cycle_step(
-            self.scenes, self.default, self.current, self.include_off, reverse
+            self.scenes,
+            self.default,
+            self.current,
+            self.include_off,
+            reverse,
+            self.wrap,
         )
         source = SOURCE_PREVIOUS if reverse else SOURCE_NEXT
         if target == OFF:

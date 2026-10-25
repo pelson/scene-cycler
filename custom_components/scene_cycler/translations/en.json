@@ -10,13 +10,15 @@
           "scenes": "Scenes to cycle through",
           "off_scene": "Off scene",
           "include_off": "Include off in the cycle",
+          "wrap": "Wrap round",
           "follow_default": "Follow default changes"
         },
         "data_description": {
           "area": "The room's lights are this area's lights, with light groups expanded to their members.",
-          "scenes": "Next and previous step through these in this order, wrapping round.",
+          "scenes": "Next and previous step through these in this order.",
           "off_scene": "Applied to turn the room off. Leave empty to turn off all of the room's lights instead. It can't also be one of the scenes to cycle through.",
-          "include_off": "Off comes after a full lap of the scenes, just before the default comes round again. Useful for rooms with a single button.",
+          "include_off": "Off comes after a full lap of the scenes, just before the default comes round again. Useful for rooms with a single button. Without wrapping round, off is below the first scene.",
+          "wrap": "Next after the last scene goes back to the first. Turn this off for up/down buttons, so the ends stay put: next at the last scene and previous at the first (or at off) apply it again.",
           "follow_default": "When the default changes while the room is showing the old default, switch to the new one straight away. Otherwise a new default only takes effect the next time it's applied."
         }
       },
@@ -51,12 +53,14 @@
           "scenes": "Scenes to cycle through",
           "off_scene": "Off scene",
           "include_off": "Include off in the cycle",
+          "wrap": "Wrap round",
           "follow_default": "Follow default changes"
         },
         "data_description": {
-          "scenes": "Next and previous step through these in this order, wrapping round.",
+          "scenes": "Next and previous step through these in this order.",
           "off_scene": "Applied to turn the room off. Leave empty to turn off all of the room's lights instead. It can't also be one of the scenes to cycle through.",
-          "include_off": "Off comes after a full lap of the scenes, just before the default comes round again. Useful for rooms with a single button.",
+          "include_off": "Off comes after a full lap of the scenes, just before the default comes round again. Useful for rooms with a single button. Without wrapping round, off is below the first scene.",
+          "wrap": "Next after the last scene goes back to the first. Turn this off for up/down buttons, so the ends stay put: next at the last scene and previous at the first (or at off) apply it again.",
           "follow_default": "When the default changes while the room is showing the old default, switch to the new one straight away. Otherwise a new default only takes effect the next time it's applied."
         }
       },

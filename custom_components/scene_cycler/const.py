@@ -12,12 +12,14 @@ CONF_SCENES = "scenes"
 CONF_DEFAULT_SCENE = "default_scene"
 CONF_OFF_SCENE = "off_scene"
 CONF_INCLUDE_OFF = "include_off"
+CONF_WRAP = "wrap"
 CONF_FOLLOW_DEFAULT = "follow_default"
 CONF_EXCLUDED_LIGHTS = "excluded_lights"
 CONF_BRIGHTNESS_TOLERANCE = "brightness_tolerance"
 
 DEFAULT_OPTIONS = {
     CONF_INCLUDE_OFF: False,
+    CONF_WRAP: True,
     CONF_FOLLOW_DEFAULT: False,
     CONF_EXCLUDED_LIGHTS: [],
     CONF_BRIGHTNESS_TOLERANCE: 5,  # % of full brightness

@@ -44,6 +44,33 @@ def test_cycle_step(current, include_off, reverse, expected) -> None:
     assert cycle_step(SCENES, "evening", current, include_off, reverse) == expected
 
 
+@pytest.mark.parametrize(
+    ("current", "include_off", "reverse", "expected"),
+    [
+        ("dimmed", False, False, "dimmed"),  # the top stays put
+        ("bright", False, False, "evening"),
+        ("evening", False, True, "bright"),
+        ("bright", True, True, OFF),  # below the bottom is off
+        ("bright", False, True, "bright"),  # or the bottom stays put
+        (OFF, True, False, "bright"),  # up from off is the bottom, not the default
+        (OFF, True, True, OFF),
+        ("Manual", True, False, "evening"),  # the default
+        (None, False, True, "evening"),
+    ],
+)
+def test_cycle_step_ladder(current, include_off, reverse, expected) -> None:
+    assert (
+        cycle_step(SCENES, "evening", current, include_off, reverse, wrap=False)
+        == expected
+    )
+
+
+def test_cycle_step_ladder_single_scene() -> None:
+    assert cycle_step(["only"], "only", "only", True, wrap=False) == "only"
+    assert cycle_step(["only"], "only", "only", True, True, wrap=False) == OFF
+    assert cycle_step(["only"], "only", "only", False, True, wrap=False) == "only"
+
+
 def test_cycle_step_single_scene() -> None:
     assert cycle_step(["only"], "only", "only", False) == "only"
     assert cycle_step(["only"], "only", "only", True) == OFF

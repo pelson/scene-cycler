@@ -20,6 +20,7 @@ from custom_components.scene_cycler.const import (
     CONF_INCLUDE_OFF,
     CONF_OFF_SCENE,
     CONF_SCENES,
+    CONF_WRAP,
     DOMAIN,
     EVENT_SCENE_APPLIED,
 )
@@ -192,6 +193,22 @@ async def test_off_in_cycle(hass: HomeAssistant, area: str) -> None:
         await call(hass, "next")
         seen.append(hass.states.get(SCENE).state)
     assert seen == ["Bright", "Evening", "Night", "Off", "Bright"]
+
+
+async def test_ladder(hass: HomeAssistant, area: str) -> None:
+    await setup_room(hass, area, **{CONF_WRAP: False, CONF_INCLUDE_OFF: True})
+
+    seen = []
+    for _ in range(4):
+        await call(hass, "next")
+        seen.append(hass.states.get(SCENE).state)
+    for _ in range(4):
+        await call(hass, "previous")
+        seen.append(hass.states.get(SCENE).state)
+    assert seen == [
+        *("Bright", "Evening", "Night", "Night"),
+        *("Evening", "Bright", "Off", "Off"),
+    ]
 
 
 async def test_outside_change_goes_manual_and_next_applies_default(
