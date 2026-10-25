@@ -6,11 +6,11 @@ from datetime import UTC, datetime, timedelta
 
 from homeassistant.core import State
 
-from custom_components.scene_cycler.matching import Target
+from custom_components.scene_cycler.matching import Target, Tolerances
 from custom_components.scene_cycler.transit import Transit
 
 NOW = datetime(2026, 10, 25, 20, 0, tzinfo=UTC)
-TOLERANCE = 5
+TOLERANCE = Tolerances()
 
 
 def at(seconds: float) -> datetime:
@@ -18,7 +18,9 @@ def at(seconds: float) -> datetime:
 
 
 def test_pending_until_arrived_then_compared_normally() -> None:
-    transit = Transit.start("scene.x", {"light.a": Target(True, 100)}, NOW, None)
+    transit = Transit.start(
+        "scene.x", {"light.a": Target(True, {"brightness": 100})}, NOW, None
+    )
     off = {"light.a": State("light.a", "off")}
     assert transit.pending(off.get, NOW) == {"light.a"}
 
@@ -28,7 +30,9 @@ def test_pending_until_arrived_then_compared_normally() -> None:
 
 
 def test_arrival_within_tolerance() -> None:
-    transit = Transit.start("scene.x", {"light.a": Target(True, 100)}, NOW, None)
+    transit = Transit.start(
+        "scene.x", {"light.a": Target(True, {"brightness": 100})}, NOW, None
+    )
     transit.note("light.a", State("light.a", "on", {"brightness": 140}), TOLERANCE)
     assert "light.a" not in transit.arrived
     transit.note("light.a", State("light.a", "on", {"brightness": 110}), TOLERANCE)
@@ -36,7 +40,9 @@ def test_arrival_within_tolerance() -> None:
 
 
 def test_light_expires_after_apply_timeout_plus_transition() -> None:
-    transit = Transit.start("scene.x", {"light.a": Target(True, 100)}, NOW, 5)
+    transit = Transit.start(
+        "scene.x", {"light.a": Target(True, {"brightness": 100})}, NOW, 5
+    )
     off = {"light.a": State("light.a", "off")}
     assert transit.pending(off.get, at(14)) == {"light.a"}
     assert transit.pending(off.get, at(15)) == set()

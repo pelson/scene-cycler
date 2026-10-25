@@ -65,6 +65,7 @@ from .lights import expand, group_members, room_lights, scene_states
 from .matching import (
     OFF_TARGET,
     Target,
+    Tolerances,
     cycle_step,
     differences,
     room_targets,
@@ -91,7 +92,7 @@ class Room:
         self.wrap: bool = options[CONF_WRAP]
         self.follow_default: bool = options[CONF_FOLLOW_DEFAULT]
         self.excluded: list[str] = list(options[CONF_EXCLUDED_LIGHTS])
-        self.tolerance: float = options[CONF_BRIGHTNESS_TOLERANCE]
+        self.tolerances = Tolerances(brightness=options[CONF_BRIGHTNESS_TOLERANCE])
         self.default: str = options[CONF_DEFAULT_SCENE]
 
         # A scene entity id, OFF, MANUAL, or None until the lights are known.
@@ -366,7 +367,7 @@ class Room:
         # gets there and is then changed again still counts as arrived.
         if self._transit is not None:
             self._transit.note(
-                event.data["entity_id"], event.data["new_state"], self.tolerance
+                event.data["entity_id"], event.data["new_state"], self.tolerances
             )
         self._schedule_evaluate(dt_util.utcnow() + SETTLE)
 
@@ -401,7 +402,7 @@ class Room:
             if not (pending := transit.pending(get_state, now)):
                 self._transit = None
             elif not differences(
-                transit.targets, get_state, self.tolerance, skip=pending
+                transit.targets, get_state, self.tolerances, skip=pending
             ):
                 # Some lights are still on their way and the rest are there:
                 # keep showing what was applied, and look again when the
@@ -447,7 +448,7 @@ class Room:
 
     def _differences(self, targets: dict[str, Target | None]) -> list[str]:
         return differences(
-            room_targets(targets, self.lights), self.hass.states.get, self.tolerance
+            room_targets(targets, self.lights), self.hass.states.get, self.tolerances
         )
 
     def _targets(self, scene: str) -> dict[str, Target | None] | None:

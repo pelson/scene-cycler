@@ -4,6 +4,7 @@
 
 ### Added
 
+- **Switches and input booleans in scenes are compared.** A scene that turns on a switch (for example a light on a relay) now only counts as showing when that switch is on too, and switching it off shows the room as `Manual`. Before, only lights were compared.
 - **Cycling that stops at the ends, for up/down buttons.** Turn off the new *Wrap round* option and next stops at the last scene instead of going back to the first, and previous stops at the first (or at off, if it's in the cycle). Existing rooms keep wrapping round.
 - **An event when a room applies a scene.** `scene_cycler_scene_applied` is fired whenever a room applies a scene or turns off, with the scene, what the room showed before, and what caused it (next, previous, the select, the default, turning off, or following a new default). Automations can use it for things a scene can't do, such as starting music.
 

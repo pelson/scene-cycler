@@ -9,13 +9,20 @@ from custom_components.scene_cycler.const import OFF
 from custom_components.scene_cycler.matching import (
     OFF_TARGET,
     Target,
+    Tolerances,
     cycle_step,
     differences,
+    matches,
     room_targets,
     scene_targets,
+    score,
 )
 
 SCENES = ["bright", "evening", "dimmed"]
+
+
+def lit(brightness: float) -> Target:
+    return Target(True, {"brightness": brightness})
 
 
 @pytest.mark.parametrize(
@@ -90,10 +97,10 @@ def test_scene_targets_expands_groups_and_skips_other_domains() -> None:
     targets = scene_targets(states, lambda e: members.get(e, []))
 
     assert targets == {
-        "light.a": Target(True, 50),  # set itself, so the group's target doesn't apply
-        "light.b": Target(True, 100),
-        "light.c": Target(True, 128),
-        "light.d": Target(True, None),
+        "light.a": lit(50),  # set itself, so the group's target doesn't apply
+        "light.b": lit(100),
+        "light.c": lit(128),
+        "light.d": Target(True),
         "light.e": OFF_TARGET,
     }
 
@@ -105,16 +112,17 @@ def test_unavailable_target_is_unset() -> None:
         "light.c": State("light.c", "on", {"brightness": 10}),
     }
     targets = scene_targets(states, lambda e: [])
-    assert targets == {"light.a": None, "light.b": None, "light.c": Target(True, 10)}
+    assert targets == {"light.a": None, "light.b": None, "light.c": lit(10)}
     # An unset room light isn't treated as unlisted (off).
     assert room_targets(targets, ["light.a", "light.d"])["light.a"] is None
     # light.a is on but unset, so not a difference; light.c is missing, so skipped.
-    assert differences(targets, {"light.a": State("light.a", "on")}.get, 5) == []
+    on = {"light.a": State("light.a", "on")}
+    assert differences(targets, on.get, Tolerances()) == []
 
 
 def test_room_lights_not_in_scene_are_off() -> None:
-    targets = room_targets({"light.a": Target(True, 10)}, ["light.a", "light.b"])
-    assert targets == {"light.a": Target(True, 10), "light.b": OFF_TARGET}
+    targets = room_targets({"light.a": lit(10)}, ["light.a", "light.b"])
+    assert targets == {"light.a": lit(10), "light.b": OFF_TARGET}
 
 
 def test_differences() -> None:
@@ -127,16 +135,50 @@ def test_differences() -> None:
         "light.unavailable": State("light.unavailable", "unavailable"),
     }
     targets = {
-        "light.within": Target(True, 100),  # 10 off; 5% of 255 is 12.75
-        "light.outside": Target(True, 100),
+        "light.within": lit(100),  # 10 off; 5% of 255 is 12.75
+        "light.outside": lit(100),
         "light.should_be_off": OFF_TARGET,
-        "light.should_be_on": Target(True, 100),
-        "light.any_brightness": Target(True, None),
-        "light.unavailable": Target(True, 100),
-        "light.missing": Target(True, 100),
+        "light.should_be_on": lit(100),
+        "light.any_brightness": Target(True),
+        "light.unavailable": lit(100),
+        "light.missing": lit(100),
     }
-    assert differences(targets, states.get, 5) == [
+    assert differences(targets, states.get, Tolerances()) == [
         "light.outside",
         "light.should_be_off",
         "light.should_be_on",
     ]
+
+
+def test_switches_and_input_booleans_are_targets() -> None:
+    states = {
+        "switch.tv": State("switch.tv", "on"),
+        "input_boolean.guest": State("input_boolean.guest", "off"),
+        "media_player.sonos": State("media_player.sonos", "playing"),
+        "climate.hall": State("climate.hall", "heat"),
+    }
+    assert scene_targets(states, lambda e: []) == {
+        "switch.tv": Target(True),
+        "input_boolean.guest": OFF_TARGET,
+    }
+
+
+def test_switch_mode_only() -> None:
+    target = Target(True)
+    assert score("switch.x", target, State("switch.x", "off"), Tolerances()) == 1.0
+    assert matches("switch.x", target, State("switch.x", "on"), Tolerances())
+
+
+def test_light_score_beyond_tolerance() -> None:
+    state = State("light.a", "on", {"brightness": 140})
+    # 40 off, less the 5% tolerance (12.75), as a fraction of full brightness.
+    assert score("light.a", lit(100), state, Tolerances()) == pytest.approx(
+        (40 - 12.75) / 255
+    )
+    assert score("light.a", lit(100), state, Tolerances(brightness=20)) == 0.0
+    assert score("light.a", OFF_TARGET, state, Tolerances()) == 1.0
+
+
+def test_dimension_entity_doesnt_report_is_skipped() -> None:
+    # An on/off-only light can't be at a brightness: on is enough.
+    assert matches("light.a", lit(200), State("light.a", "on"), Tolerances())

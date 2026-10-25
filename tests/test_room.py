@@ -35,9 +35,11 @@ from conftest import (
     EVENING,
     LAMP,
     LED,
+    MOVIE,
     NIGHT,
     SLEEP,
     STALE,
+    TV,
     settle,
     setup_room,
 )
@@ -147,6 +149,27 @@ async def test_unavailable_target_is_left_alone(
     await settle(hass, freezer)
     assert hass.states.get(SCENE).state == "Stale"
     assert hass.states.get(MODIFIED).state == "off"
+
+
+async def test_scene_sets_and_matches_an_input_boolean(
+    hass: HomeAssistant, area: str, freezer: FrozenDateTimeFactory
+) -> None:
+    await setup_room(hass, area, **{CONF_SCENES: [BRIGHT, MOVIE]})
+    await hass.services.async_call(
+        "select",
+        "select_option",
+        {"entity_id": SCENE, "option": "Movie"},
+        blocking=True,
+    )
+    await settle(hass, freezer)
+    assert hass.states.get(TV).state == "on"
+    assert hass.states.get(SCENE).state == "Movie"
+    assert hass.states.get(MODIFIED).state == "off"
+
+    hass.states.async_set(TV, "off")
+    await settle(hass, freezer)
+    assert hass.states.get(SCENE).state == "Manual"
+    assert hass.states.get(MODIFIED).attributes["differences"] == [TV]
 
 
 async def test_scene_applied_event(hass: HomeAssistant, area: str) -> None:

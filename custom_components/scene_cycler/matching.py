@@ -1,4 +1,4 @@
-"""Comparing lights to scenes, and choosing the next scene in the cycle.
+"""Comparing entities to scenes, and choosing the next scene in the cycle.
 
 Kept free of Home Assistant objects beyond `State`, so it can be tested on its own.
 """
@@ -6,7 +6,7 @@ Kept free of Home Assistant objects beyond `State`, so it can be tested on its o
 from __future__ import annotations
 
 from collections.abc import Callable, Collection, Iterable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from homeassistant.const import STATE_OFF, STATE_ON, STATE_UNAVAILABLE, STATE_UNKNOWN
 from homeassistant.core import State, split_entity_id
@@ -18,33 +18,80 @@ LIGHT = "light"
 
 @dataclass(frozen=True)
 class Target:
-    """What a scene wants one light to be."""
+    """What a scene wants one entity to be.
 
-    on: bool
-    brightness: int | None = None  # 0-255, None when the scene doesn't say
+    A mode (on, or off) and any numbers it sets, such as a light's brightness.
+    """
+
+    on: bool | None
+    dims: Mapping[str, float] = field(default_factory=dict)
 
 
 OFF_TARGET = Target(on=False)
 
 
+@dataclass(frozen=True)
+class Tolerances:
+    """How far each kind of number can be off and still match, in % of its range."""
+
+    brightness: float = 5
+
+
+@dataclass(frozen=True)
+class _Dimension:
+    attribute: str
+    range: float
+    tolerance: str  # the Tolerances field that applies
+
+
+@dataclass(frozen=True)
+class _Domain:
+    on_state: str
+    off_state: str
+    dimensions: tuple[_Dimension, ...] = ()
+    # A light that's off has no brightness, so there's nothing to compare.
+    dimensions_only_when_on: bool = False
+
+
+_DOMAINS = {
+    LIGHT: _Domain(
+        STATE_ON,
+        STATE_OFF,
+        (_Dimension("brightness", 255, "brightness"),),
+        dimensions_only_when_on=True,
+    ),
+    "switch": _Domain(STATE_ON, STATE_OFF),
+    "input_boolean": _Domain(STATE_ON, STATE_OFF),
+}
+
+# Entities of other domains in a scene are applied with it but not compared.
+COMPARED_DOMAINS = frozenset(_DOMAINS)
+
+
+def _domain(entity_id: str) -> _Domain:
+    return _DOMAINS[split_entity_id(entity_id)[0]]
+
+
 def scene_targets(
     states: Mapping[str, State], members: Callable[[str], list[str]]
 ) -> dict[str, Target | None]:
-    """Targets for each light in a scene, with light groups expanded.
+    """Targets for each entity in a scene that's compared, with light groups expanded.
 
     A group's target applies to each of its members, unless the scene also
-    sets that member itself. A light saved in a state that isn't on or off
-    (it was unavailable when the scene was saved) has target None: Home
-    Assistant leaves it alone when applying the scene, so it's not compared
-    and not turned off either.
+    sets that member itself. An entity saved in a state its domain doesn't
+    rest in (it was unavailable when the scene was saved) has target None:
+    Home Assistant leaves it alone when applying the scene, so it's not
+    compared and not turned off either.
     """
     explicit: dict[str, Target | None] = {}
     from_groups: dict[str, Target | None] = {}
     for entity_id, state in states.items():
-        if split_entity_id(entity_id)[0] != LIGHT:
+        if split_entity_id(entity_id)[0] not in COMPARED_DOMAINS:
             continue
-        target = _target(state)
-        if group_members := members(entity_id):
+        target = _target(entity_id, state)
+        if split_entity_id(entity_id)[0] == LIGHT and (
+            group_members := members(entity_id)
+        ):
             for member in group_members:
                 from_groups.setdefault(member, target)
         else:
@@ -52,17 +99,29 @@ def scene_targets(
     return from_groups | explicit
 
 
-def _target(state: State) -> Target | None:
-    if state.state == STATE_OFF:
-        return OFF_TARGET
-    if state.state != STATE_ON:
+def _target(entity_id: str, state: State) -> Target | None:
+    domain = _domain(entity_id)
+    if state.state == domain.off_state:
+        on = False
+    elif state.state == domain.on_state:
+        on = True
+    else:
         return None
+    if not on and domain.dimensions_only_when_on:
+        return OFF_TARGET
     attributes = state.attributes
-    if (brightness := attributes.get("brightness")) is not None:
-        return Target(on=True, brightness=round(float(brightness)))
-    if (pct := attributes.get("brightness_pct")) is not None:
-        return Target(on=True, brightness=round(float(pct) * 255 / 100))
-    return Target(on=True)
+    dims = {
+        dimension.attribute: round(float(value))
+        for dimension in domain.dimensions
+        if (value := attributes.get(dimension.attribute)) is not None
+    }
+    if (
+        split_entity_id(entity_id)[0] == LIGHT
+        and "brightness" not in dims
+        and (pct := attributes.get("brightness_pct")) is not None
+    ):
+        dims["brightness"] = round(float(pct) * 255 / 100)
+    return Target(on, dims)
 
 
 def room_targets(
@@ -73,38 +132,60 @@ def room_targets(
 
 
 def comparable(state: State | None) -> bool:
-    """Whether a light's state can be compared to a target at all.
+    """Whether an entity's state can be compared to a target at all.
 
-    Lights that are missing, unavailable or unknown can't be, and a bulb
+    Entities that are missing, unavailable or unknown can't be, and a bulb
     dropping off the network isn't someone changing the room.
     """
     return state is not None and state.state not in (STATE_UNAVAILABLE, STATE_UNKNOWN)
 
 
-def matches(entity_id: str, target: Target, state: State, tolerance_pct: float) -> bool:
-    """Whether a light is at its target: on/off, and brightness within tolerance."""
-    on = state.state == STATE_ON
-    if on != target.on:
-        return False
-    brightness = state.attributes.get("brightness")
-    return not (
-        on
-        and target.brightness is not None
-        and brightness is not None
-        and abs(brightness - target.brightness) > tolerance_pct * 255 / 100
-    )
+def score(
+    entity_id: str, target: Target, state: State, tolerances: Tolerances
+) -> float:
+    """How far an entity is from its target: 0 when it matches, 1 when it's wrong.
+
+    A wrong mode (off instead of on) is 1. Otherwise it's the worst of the
+    numbers the scene sets and the entity reports: how far beyond its
+    tolerance it is, as a fraction of its range. Numbers the entity doesn't
+    report, such as brightness on an on/off-only light, are skipped.
+    """
+    domain = _domain(entity_id)
+    if target.on is not None and state.state != (
+        domain.on_state if target.on else domain.off_state
+    ):
+        return 1.0
+    if domain.dimensions_only_when_on and not target.on:
+        return 0.0
+    worst = 0.0
+    for dimension in domain.dimensions:
+        wanted = target.dims.get(dimension.attribute)
+        actual = state.attributes.get(dimension.attribute)
+        if wanted is None or actual is None:
+            continue
+        tolerance = getattr(tolerances, dimension.tolerance) * dimension.range / 100
+        excess = max(0.0, abs(actual - wanted) - tolerance) / dimension.range
+        worst = max(worst, excess)
+    return min(worst, 1.0)
+
+
+def matches(
+    entity_id: str, target: Target, state: State, tolerances: Tolerances
+) -> bool:
+    """Whether an entity is at its target, within tolerance."""
+    return score(entity_id, target, state, tolerances) == 0.0
 
 
 def differences(
     targets: Mapping[str, Target | None],
     get_state: Callable[[str], State | None],
-    tolerance_pct: float,
+    tolerances: Tolerances,
     skip: Collection[str] = (),
 ) -> list[str]:
-    """Lights that don't match their target.
+    """Entities that don't match their target.
 
-    Lights that can't be compared are skipped, as are lights the scene leaves
-    unset (target None) and those in `skip`.
+    Entities that can't be compared are skipped, as are those the scene
+    leaves unset (target None) and those in `skip`.
     """
     return sorted(
         entity_id
@@ -112,7 +193,7 @@ def differences(
         if target is not None
         and entity_id not in skip
         and comparable(state := get_state(entity_id))
-        and not matches(entity_id, target, state, tolerance_pct)
+        and not matches(entity_id, target, state, tolerances)
     )
 
 

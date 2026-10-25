@@ -18,7 +18,7 @@ from datetime import datetime, timedelta
 from homeassistant.core import State
 
 from .const import APPLY_TIMEOUT
-from .matching import Target, comparable, matches
+from .matching import Target, Tolerances, comparable, matches
 
 
 @dataclass
@@ -47,13 +47,13 @@ class Transit:
             deadlines=dict.fromkeys(targets, deadline),
         )
 
-    def note(self, entity_id: str, state: State | None, tolerance_pct: float) -> None:
-        """Record a light reaching its target. Once arrived, it stays arrived."""
+    def note(self, entity_id: str, state: State | None, tolerances: Tolerances) -> None:
+        """Record an entity reaching its target. Once arrived, it stays arrived."""
         target = self.targets.get(entity_id)
         if (
             target is not None
             and comparable(state)
-            and matches(entity_id, target, state, tolerance_pct)
+            and matches(entity_id, target, state, tolerances)
         ):
             self.arrived.add(entity_id)
 

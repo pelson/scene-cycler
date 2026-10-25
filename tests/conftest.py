@@ -33,12 +33,14 @@ from custom_components.scene_cycler.const import (
 CEILING = "light.ceiling"
 LAMP = "light.lamp"
 LED = "light.switch_led"
+TV = "input_boolean.tv"
 
 BRIGHT = "scene.bright"
 EVENING = "scene.evening"
 NIGHT = "scene.night"
 SLEEP = "scene.sleep"  # off scene: everything off but the lamp at 1
 STALE = "scene.stale"  # saved while the ceiling was unavailable
+MOVIE = "scene.movie"  # the lamp low and the TV on
 
 
 @pytest.fixture(autouse=True)
@@ -70,7 +72,7 @@ def light_calls(hass: HomeAssistant) -> list[ServiceCall]:
 
 @pytest.fixture
 async def area(hass: HomeAssistant, light_calls) -> str:
-    """The living room area, with its lights registered and off."""
+    """The living room area, with its lights registered and off, and a TV."""
     living_room = ar.async_get(hass).async_create("Living Room")
     entities = er.async_get(hass)
     for object_id in ("ceiling", "lamp"):
@@ -97,6 +99,12 @@ async def area(hass: HomeAssistant, light_calls) -> str:
 
     for light in (CEILING, LAMP, LED):
         hass.states.async_set(light, "off")
+
+    # A real input_boolean rather than a faked switch: setting the room up
+    # loads the switch integration, whose services would replace fake ones.
+    assert await async_setup_component(
+        hass, "input_boolean", {"input_boolean": {"tv": {"name": "TV"}}}
+    )
 
     assert await async_setup_component(
         hass,
@@ -128,6 +136,14 @@ async def area(hass: HomeAssistant, light_calls) -> str:
                     "entities": {
                         CEILING: {"state": "unavailable"},
                         LAMP: {"state": "on", "brightness": 80},
+                    },
+                },
+                {
+                    "id": "movie",
+                    "name": "Movie",
+                    "entities": {
+                        LAMP: {"state": "on", "brightness": 40},
+                        TV: "on",
                     },
                 },
                 {
