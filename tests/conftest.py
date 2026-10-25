@@ -34,13 +34,14 @@ CEILING = "light.ceiling"
 LAMP = "light.lamp"
 LED = "light.switch_led"
 TV = "input_boolean.tv"
+BLIND = "cover.blind"
 
 BRIGHT = "scene.bright"
 EVENING = "scene.evening"
 NIGHT = "scene.night"
 SLEEP = "scene.sleep"  # off scene: everything off but the lamp at 1
 STALE = "scene.stale"  # saved while the ceiling was unavailable
-MOVIE = "scene.movie"  # the lamp low and the TV on
+MOVIE = "scene.movie"  # the lamp low, the TV on and the blind closed, tilted
 
 
 @pytest.fixture(autouse=True)
@@ -70,9 +71,47 @@ def light_calls(hass: HomeAssistant) -> list[ServiceCall]:
     return calls
 
 
+def set_cover(hass: HomeAssistant, entity_id: str, **attributes: Any) -> None:
+    """Move a fake cover at once, keeping what isn't given."""
+    state = hass.states.get(entity_id)
+    attributes = {**state.attributes, **attributes}
+    position = attributes["current_position"]
+    hass.states.async_set(entity_id, "closed" if position == 0 else "open", attributes)
+
+
 @pytest.fixture
-async def area(hass: HomeAssistant, light_calls) -> str:
-    """The living room area, with its lights registered and off, and a TV."""
+def cover_calls(hass: HomeAssistant) -> list[ServiceCall]:
+    """Fake cover services that move the cover at once."""
+    calls: list[ServiceCall] = []
+
+    def handler(**fixed: int):
+        async def handle(call: ServiceCall) -> None:
+            calls.append(call)
+            moves = dict(fixed)
+            if "position" in call.data:
+                moves["current_position"] = call.data["position"]
+            if "tilt_position" in call.data:
+                moves["current_tilt_position"] = call.data["tilt_position"]
+            for entity_id in cv.ensure_list(call.data[ATTR_ENTITY_ID]):
+                set_cover(hass, entity_id, **moves)
+
+        return handle
+
+    for service, fixed in (
+        ("set_cover_position", {}),
+        ("set_cover_tilt_position", {}),
+        ("open_cover", {"current_position": 100}),
+        ("close_cover", {"current_position": 0}),
+        ("open_cover_tilt", {"current_tilt_position": 100}),
+        ("close_cover_tilt", {"current_tilt_position": 0}),
+    ):
+        hass.services.async_register("cover", service, handler(**fixed))
+    return calls
+
+
+@pytest.fixture
+async def area(hass: HomeAssistant, light_calls, cover_calls) -> str:
+    """The living room area, with its lights registered and off, a TV and a blind."""
     living_room = ar.async_get(hass).async_create("Living Room")
     entities = er.async_get(hass)
     for object_id in ("ceiling", "lamp"):
@@ -99,6 +138,15 @@ async def area(hass: HomeAssistant, light_calls) -> str:
 
     for light in (CEILING, LAMP, LED):
         hass.states.async_set(light, "off")
+    hass.states.async_set(
+        BLIND,
+        "open",
+        {
+            "current_position": 100,
+            "current_tilt_position": 0,
+            "supported_features": 255,
+        },
+    )
 
     # A real input_boolean rather than a faked switch: setting the room up
     # loads the switch integration, whose services would replace fake ones.
@@ -144,6 +192,11 @@ async def area(hass: HomeAssistant, light_calls) -> str:
                     "entities": {
                         LAMP: {"state": "on", "brightness": 40},
                         TV: "on",
+                        BLIND: {
+                            "state": "closed",
+                            "current_position": 0,
+                            "current_tilt_position": 50,
+                        },
                     },
                 },
                 {

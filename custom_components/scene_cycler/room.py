@@ -46,6 +46,7 @@ from .const import (
     CONF_FOLLOW_DEFAULT,
     CONF_INCLUDE_OFF,
     CONF_OFF_SCENE,
+    CONF_POSITION_TOLERANCE,
     CONF_SCENES,
     CONF_WRAP,
     DOMAIN,
@@ -92,7 +93,10 @@ class Room:
         self.wrap: bool = options[CONF_WRAP]
         self.follow_default: bool = options[CONF_FOLLOW_DEFAULT]
         self.excluded: list[str] = list(options[CONF_EXCLUDED_LIGHTS])
-        self.tolerances = Tolerances(brightness=options[CONF_BRIGHTNESS_TOLERANCE])
+        self.tolerances = Tolerances(
+            brightness=options[CONF_BRIGHTNESS_TOLERANCE],
+            position=options[CONF_POSITION_TOLERANCE],
+        )
         self.default: str = options[CONF_DEFAULT_SCENE]
 
         # A scene entity id, OFF, MANUAL, or None until the lights are known.

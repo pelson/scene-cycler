@@ -62,3 +62,31 @@ def test_next_check() -> None:
     assert transit.next_check(off.get, NOW) == at(10)
     transit.note("light.a", State("light.a", "on"), TOLERANCE)
     assert transit.next_check(off.get, NOW) is None
+
+
+CLOSED_AT_0 = Target(None, {"current_position": 0})
+
+
+def test_cover_deadline_is_longer() -> None:
+    transit = Transit.start("scene.x", {"cover.c": CLOSED_AT_0}, NOW, None)
+    closing = {"cover.c": State("cover.c", "closing", {"current_position": 60})}
+    assert transit.pending(closing.get, at(40)) == {"cover.c"}
+    assert transit.pending(closing.get, at(89)) == {"cover.c"}
+    assert transit.pending(closing.get, at(90)) == set()
+
+
+def test_stopped_cover_after_grace_is_not_pending() -> None:
+    transit = Transit.start("scene.x", {"cover.c": CLOSED_AT_0}, NOW, None)
+    # It reports open at 50 and isn't moving: someone stopped it, or it
+    # hasn't started reporting movement yet.
+    stopped = {"cover.c": State("cover.c", "open", {"current_position": 50})}
+    assert transit.pending(stopped.get, at(4)) == {"cover.c"}
+    assert transit.pending(stopped.get, at(5)) == set()
+
+
+def test_next_check_with_cover() -> None:
+    transit = Transit.start("scene.x", {"cover.c": CLOSED_AT_0}, NOW, None)
+    stopped = {"cover.c": State("cover.c", "open", {"current_position": 50})}
+    assert transit.next_check(stopped.get, NOW) == at(5)
+    closing = {"cover.c": State("cover.c", "closing", {"current_position": 50})}
+    assert transit.next_check(closing.get, at(6)) == at(90)

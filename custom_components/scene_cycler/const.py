@@ -16,6 +16,7 @@ CONF_WRAP = "wrap"
 CONF_FOLLOW_DEFAULT = "follow_default"
 CONF_EXCLUDED_LIGHTS = "excluded_lights"
 CONF_BRIGHTNESS_TOLERANCE = "brightness_tolerance"
+CONF_POSITION_TOLERANCE = "position_tolerance"
 
 DEFAULT_OPTIONS = {
     CONF_INCLUDE_OFF: False,
@@ -23,6 +24,7 @@ DEFAULT_OPTIONS = {
     CONF_FOLLOW_DEFAULT: False,
     CONF_EXCLUDED_LIGHTS: [],
     CONF_BRIGHTNESS_TOLERANCE: 5,  # % of full brightness
+    CONF_POSITION_TOLERANCE: 5,  # % of a cover's travel or tilt
 }
 
 # What the room is showing when it isn't showing one of its scenes.
@@ -49,6 +51,16 @@ SETTLE = timedelta(seconds=2)
 # transition), so slow lights don't make the room look like it's still on
 # the previous scene and send the next press from the wrong place.
 APPLY_TIMEOUT = timedelta(seconds=10)
+
+# Shutters and blinds take much longer to travel, so a cover is waited for this
+# long instead (plus any transition) before it counts as a difference.
+COVER_APPLY_TIMEOUT = timedelta(seconds=90)
+
+# A cover that isn't opening or closing won't get to its target by itself
+# (someone stopped it), so it's compared straight away rather than waited for.
+# Not until this long after the apply, though: some integrations only report
+# opening/closing a moment after the command.
+COVER_START_GRACE = timedelta(seconds=5)
 
 # Light names ending in one of these words are usually indicators rather than
 # room lighting ("Switch LED", "Button Backlight"), so they're pre-selected for

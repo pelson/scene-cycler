@@ -15,10 +15,12 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 
-from homeassistant.core import State
+from homeassistant.core import State, split_entity_id
 
-from .const import APPLY_TIMEOUT
-from .matching import Target, Tolerances, comparable, matches
+from .const import APPLY_TIMEOUT, COVER_APPLY_TIMEOUT, COVER_START_GRACE
+from .matching import Target, Tolerances, comparable, is_moving, matches
+
+COVER = "cover"
 
 
 @dataclass
@@ -39,12 +41,17 @@ class Transit:
         now: datetime,
         transition: float | None,
     ) -> Transit:
-        deadline = now + APPLY_TIMEOUT + timedelta(seconds=transition or 0)
+        fade = timedelta(seconds=transition or 0)
         return cls(
             applied=applied,
             started=now,
             targets=dict(targets),
-            deadlines=dict.fromkeys(targets, deadline),
+            deadlines={
+                entity_id: now
+                + (COVER_APPLY_TIMEOUT if _is_cover(entity_id) else APPLY_TIMEOUT)
+                + fade
+                for entity_id in targets
+            },
         )
 
     def note(self, entity_id: str, state: State | None, tolerances: Tolerances) -> None:
@@ -60,21 +67,47 @@ class Transit:
     def pending(
         self, get_state: Callable[[str], State | None], now: datetime
     ) -> set[str]:
-        """Lights still on their way: not arrived, before their deadline, and comparable.
+        """Entities still on their way: not arrived, before their deadline, and comparable.
 
-        A light that's unavailable can't arrive, so it isn't waited for.
+        An entity that's unavailable can't arrive, so it isn't waited for.
+        Nor is a cover that has stopped short of its target, once it's had
+        time to start reporting movement.
         """
         return {
             entity_id
             for entity_id, deadline in self.deadlines.items()
             if entity_id not in self.arrived
             and now < deadline
-            and comparable(get_state(entity_id))
+            and comparable(state := get_state(entity_id))
+            and not self._stopped_cover(entity_id, state, now)
         }
 
     def next_check(
         self, get_state: Callable[[str], State | None], now: datetime
     ) -> datetime | None:
-        """When the lights still on their way run out of time, if nothing changes first."""
-        pending = self.pending(get_state, now)
-        return min((self.deadlines[e] for e in pending), default=None)
+        """When an entity still on its way may stop being waited for by itself.
+
+        That's its deadline or, for a cover that isn't moving, the end of the
+        grace for starting to move.
+        """
+        grace_end = self.started + COVER_START_GRACE
+        times = [
+            grace_end
+            if _is_cover(entity_id)
+            and now < grace_end
+            and not is_moving(get_state(entity_id))
+            else self.deadlines[entity_id]
+            for entity_id in self.pending(get_state, now)
+        ]
+        return min(times, default=None)
+
+    def _stopped_cover(self, entity_id: str, state: State, now: datetime) -> bool:
+        return (
+            _is_cover(entity_id)
+            and now >= self.started + COVER_START_GRACE
+            and not is_moving(state)
+        )
+
+
+def _is_cover(entity_id: str) -> bool:
+    return split_entity_id(entity_id)[0] == COVER

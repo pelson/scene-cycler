@@ -35,6 +35,7 @@ class Tolerances:
     """How far each kind of number can be off and still match, in % of its range."""
 
     brightness: float = 5
+    position: float = 5  # a cover's position and tilt
 
 
 @dataclass(frozen=True)
@@ -51,7 +52,16 @@ class _Domain:
     dimensions: tuple[_Dimension, ...] = ()
     # A light that's off has no brightness, so there's nothing to compare.
     dimensions_only_when_on: bool = False
+    # Other saved states Home Assistant applies as on (True) or off (False).
+    target_aliases: Mapping[str, bool] = field(default_factory=dict)
+    # When the scene sets this, it decides on/off by itself (a cover at
+    # position 0 is closed whatever state was saved), so on/off isn't compared.
+    mode_from: str | None = None
 
+
+COVER_OPEN = "open"
+COVER_CLOSED = "closed"
+COVER_MOVING = ("opening", "closing")
 
 _DOMAINS = {
     LIGHT: _Domain(
@@ -62,6 +72,16 @@ _DOMAINS = {
     ),
     "switch": _Domain(STATE_ON, STATE_OFF),
     "input_boolean": _Domain(STATE_ON, STATE_OFF),
+    "cover": _Domain(
+        COVER_OPEN,
+        COVER_CLOSED,
+        (
+            _Dimension("current_position", 100, "position"),
+            _Dimension("current_tilt_position", 100, "position"),
+        ),
+        target_aliases={"opening": True, "closing": False},
+        mode_from="current_position",
+    ),
 }
 
 # Entities of other domains in a scene are applied with it but not compared.
@@ -101,10 +121,13 @@ def scene_targets(
 
 def _target(entity_id: str, state: State) -> Target | None:
     domain = _domain(entity_id)
+    on: bool | None
     if state.state == domain.off_state:
         on = False
     elif state.state == domain.on_state:
         on = True
+    elif state.state in domain.target_aliases:
+        on = domain.target_aliases[state.state]
     else:
         return None
     if not on and domain.dimensions_only_when_on:
@@ -121,6 +144,8 @@ def _target(entity_id: str, state: State) -> Target | None:
         and (pct := attributes.get("brightness_pct")) is not None
     ):
         dims["brightness"] = round(float(pct) * 255 / 100)
+    if domain.mode_from in dims:
+        on = None
     return Target(on, dims)
 
 
@@ -138,6 +163,11 @@ def comparable(state: State | None) -> bool:
     dropping off the network isn't someone changing the room.
     """
     return state is not None and state.state not in (STATE_UNAVAILABLE, STATE_UNKNOWN)
+
+
+def is_moving(state: State) -> bool:
+    """Whether a cover is on its way somewhere."""
+    return state.state in COVER_MOVING
 
 
 def score(

@@ -17,6 +17,7 @@ from custom_components.scene_cycler.const import (
     CONF_FOLLOW_DEFAULT,
     CONF_INCLUDE_OFF,
     CONF_OFF_SCENE,
+    CONF_POSITION_TOLERANCE,
     CONF_SCENES,
     CONF_WRAP,
     DEFAULT_OPTIONS,
@@ -72,6 +73,7 @@ async def test_user_flow(hass: HomeAssistant, area: str) -> None:
             CONF_DEFAULT_SCENE: BRIGHT,
             CONF_EXCLUDED_LIGHTS: [LED],
             CONF_BRIGHTNESS_TOLERANCE: 5,
+            CONF_POSITION_TOLERANCE: 10,
         },
     )
     assert result["type"] is FlowResultType.CREATE_ENTRY
@@ -83,6 +85,7 @@ async def test_user_flow(hass: HomeAssistant, area: str) -> None:
         CONF_DEFAULT_SCENE: BRIGHT,
         CONF_EXCLUDED_LIGHTS: [LED],
         CONF_BRIGHTNESS_TOLERANCE: 5,
+        CONF_POSITION_TOLERANCE: 10,
     }
     await hass.async_block_till_done()
     assert hass.states.get("select.living_room_scene") is not None
@@ -119,7 +122,11 @@ async def test_one_room_per_area(hass: HomeAssistant, area: str) -> None:
 
 async def test_migration_fills_new_options(hass: HomeAssistant, area: str) -> None:
     """An entry from before an option existed gets its default."""
-    old_options = {k: v for k, v in DEFAULT_OPTIONS.items() if k != CONF_WRAP}
+    old_options = {
+        k: v
+        for k, v in DEFAULT_OPTIONS.items()
+        if k not in (CONF_WRAP, CONF_POSITION_TOLERANCE)
+    }
     entry = MockConfigEntry(
         domain=DOMAIN,
         title="Living Room",
@@ -133,6 +140,7 @@ async def test_migration_fills_new_options(hass: HomeAssistant, area: str) -> No
     await hass.async_block_till_done()
 
     assert entry.options[CONF_WRAP] is True
+    assert entry.options[CONF_POSITION_TOLERANCE] == 5
     assert entry.minor_version == SceneCyclerConfigFlow.MINOR_VERSION
     assert hass.states.get("select.living_room_scene") is not None
 
@@ -154,7 +162,11 @@ async def test_options_flow_clears_off_scene_and_excludes(
 
     result = await hass.config_entries.options.async_configure(
         result["flow_id"],
-        {CONF_DEFAULT_SCENE: EVENING, CONF_BRIGHTNESS_TOLERANCE: 10},
+        {
+            CONF_DEFAULT_SCENE: EVENING,
+            CONF_BRIGHTNESS_TOLERANCE: 10,
+            CONF_POSITION_TOLERANCE: 5,
+        },
     )
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert CONF_OFF_SCENE not in entry.options

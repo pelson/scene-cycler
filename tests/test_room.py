@@ -23,13 +23,16 @@ from custom_components.scene_cycler.const import (
     CONF_FOLLOW_DEFAULT,
     CONF_INCLUDE_OFF,
     CONF_OFF_SCENE,
+    CONF_POSITION_TOLERANCE,
     CONF_SCENES,
     CONF_WRAP,
+    COVER_START_GRACE,
     DOMAIN,
     EVENT_SCENE_APPLIED,
 )
 
 from conftest import (
+    BLIND,
     BRIGHT,
     CEILING,
     EVENING,
@@ -40,6 +43,7 @@ from conftest import (
     SLEEP,
     STALE,
     TV,
+    set_cover,
     settle,
     setup_room,
 )
@@ -539,6 +543,81 @@ async def test_lights_that_never_follow_show_what_they_are_after_the_wait(
     async_fire_time_changed(hass)
     await hass.async_block_till_done()
     assert hass.states.get(SCENE).state == "Bright"
+
+
+def covers_move_slowly(hass: HomeAssistant, moving: str | None = "closing") -> None:
+    """Make covers slow: a command starts them moving (or, with None, does nothing)."""
+
+    async def start(call: ServiceCall) -> None:
+        if moving is None:
+            return
+        for entity_id in cv.ensure_list(call.data["entity_id"]):
+            state = hass.states.get(entity_id)
+            hass.states.async_set(entity_id, moving, state.attributes)
+
+    for service in (
+        "set_cover_position",
+        "set_cover_tilt_position",
+        "open_cover",
+        "close_cover",
+        "open_cover_tilt",
+        "close_cover_tilt",
+    ):
+        hass.services.async_register("cover", service, start)
+
+
+async def select_scene(hass: HomeAssistant, option: str) -> None:
+    await hass.services.async_call(
+        "select", "select_option", {"entity_id": SCENE, "option": option}, blocking=True
+    )
+
+
+async def test_slow_cover_doesnt_go_manual(
+    hass: HomeAssistant, area: str, freezer: FrozenDateTimeFactory
+) -> None:
+    await setup_room(hass, area, **{CONF_SCENES: [BRIGHT, MOVIE]})
+    covers_move_slowly(hass)
+    await select_scene(hass, "Movie")
+
+    for _ in range(14):  # about 40 s
+        await settle(hass, freezer)
+        assert hass.states.get(SCENE).state == "Movie"
+    assert hass.states.get(BLIND).state == "closing"
+
+    set_cover(hass, BLIND, current_position=0, current_tilt_position=50)
+    await settle(hass, freezer)
+    assert hass.states.get(SCENE).state == "Movie"
+    assert hass.states.get(MODIFIED).state == "off"
+
+
+async def test_cover_stopped_half_way_goes_manual(
+    hass: HomeAssistant, area: str, freezer: FrozenDateTimeFactory
+) -> None:
+    await setup_room(hass, area, **{CONF_SCENES: [BRIGHT, MOVIE]})
+    covers_move_slowly(hass, moving=None)
+    await select_scene(hass, "Movie")
+    # Someone stops the blind half way down.
+    set_cover(hass, BLIND, current_position=50)
+    await settle(hass, freezer)
+    assert hass.states.get(SCENE).state == "Movie"  # it might still start moving
+
+    freezer.tick(COVER_START_GRACE)
+    await settle(hass, freezer)
+    assert hass.states.get(SCENE).state == "Manual"
+    assert BLIND in hass.states.get(MODIFIED).attributes["differences"]
+
+
+async def test_position_tolerance(
+    hass: HomeAssistant, area: str, freezer: FrozenDateTimeFactory
+) -> None:
+    await setup_room(
+        hass, area, **{CONF_SCENES: [BRIGHT, MOVIE], CONF_POSITION_TOLERANCE: 20}
+    )
+    await select_scene(hass, "Movie")
+    await settle(hass, freezer)
+    set_cover(hass, BLIND, current_tilt_position=65)  # 15 off
+    await settle(hass, freezer)
+    assert hass.states.get(SCENE).state == "Movie"
 
 
 async def test_outside_change_after_arrival_shows_at_once(

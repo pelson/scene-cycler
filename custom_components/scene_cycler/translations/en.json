@@ -28,12 +28,14 @@
         "data": {
           "default_scene": "Default scene",
           "excluded_lights": "Lights to leave out",
-          "brightness_tolerance": "Brightness tolerance"
+          "brightness_tolerance": "Brightness tolerance",
+          "position_tolerance": "Position tolerance"
         },
         "data_description": {
           "default_scene": "Applied when the room is turned on, and by the first press after the lights were changed outside a scene. Automations can change it.",
           "excluded_lights": "Lights in the area that aren't room lighting, such as indicator LEDs. Ones that look like indicators are suggested.",
-          "brightness_tolerance": "How far a light's brightness can be from the scene's and still count as matching."
+          "brightness_tolerance": "How far a light's brightness can be from the scene's and still count as matching.",
+          "position_tolerance": "How far a cover's position or tilt can be from the scene's and still count as matching."
         }
       }
     },
@@ -70,12 +72,14 @@
         "data": {
           "default_scene": "Default scene",
           "excluded_lights": "Lights to leave out",
-          "brightness_tolerance": "Brightness tolerance"
+          "brightness_tolerance": "Brightness tolerance",
+          "position_tolerance": "Position tolerance"
         },
         "data_description": {
           "default_scene": "Saving a different default here replaces one set by an automation.",
           "excluded_lights": "Lights in the area that aren't room lighting, such as indicator LEDs.",
-          "brightness_tolerance": "How far a light's brightness can be from the scene's and still count as matching."
+          "brightness_tolerance": "How far a light's brightness can be from the scene's and still count as matching.",
+          "position_tolerance": "How far a cover's position or tilt can be from the scene's and still count as matching."
         }
       }
     },

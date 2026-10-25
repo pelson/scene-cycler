@@ -22,6 +22,7 @@ from .const import (
     CONF_FOLLOW_DEFAULT,
     CONF_INCLUDE_OFF,
     CONF_OFF_SCENE,
+    CONF_POSITION_TOLERANCE,
     CONF_SCENES,
     CONF_WRAP,
     DEFAULT_OPTIONS,
@@ -77,17 +78,21 @@ def _room_schema(hass: HomeAssistant, scenes: list[str], area_id: str) -> vol.Sc
                     multiple=True,
                 )
             ),
-            vol.Required(CONF_BRIGHTNESS_TOLERANCE): selector.NumberSelector(
-                selector.NumberSelectorConfig(
-                    min=0,
-                    max=50,
-                    step=1,
-                    unit_of_measurement=PERCENTAGE,
-                    mode=selector.NumberSelectorMode.BOX,
-                )
-            ),
+            vol.Required(CONF_BRIGHTNESS_TOLERANCE): _PERCENT_SELECTOR,
+            vol.Required(CONF_POSITION_TOLERANCE): _PERCENT_SELECTOR,
         }
     )
+
+
+_PERCENT_SELECTOR = selector.NumberSelector(
+    selector.NumberSelectorConfig(
+        min=0,
+        max=50,
+        step=1,
+        unit_of_measurement=PERCENTAGE,
+        mode=selector.NumberSelectorMode.BOX,
+    )
+)
 
 
 def _scene_name(hass: HomeAssistant, scene: str) -> str:
@@ -98,7 +103,7 @@ def _scene_name(hass: HomeAssistant, scene: str) -> str:
 class SceneCyclerConfigFlow(ConfigFlow, domain=DOMAIN):
     VERSION = 1
     # Bumped whenever an option is added; async_migrate_entry fills it in.
-    MINOR_VERSION = 2
+    MINOR_VERSION = 3
 
     def __init__(self) -> None:
         self._data: dict[str, Any] = {}

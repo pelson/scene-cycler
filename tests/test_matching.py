@@ -12,6 +12,7 @@ from custom_components.scene_cycler.matching import (
     Tolerances,
     cycle_step,
     differences,
+    is_moving,
     matches,
     room_targets,
     scene_targets,
@@ -182,3 +183,72 @@ def test_light_score_beyond_tolerance() -> None:
 def test_dimension_entity_doesnt_report_is_skipped() -> None:
     # An on/off-only light can't be at a brightness: on is enough.
     assert matches("light.a", lit(200), State("light.a", "on"), Tolerances())
+
+
+def cover(state: str, position: int | None = None, tilt: int | None = None) -> State:
+    attributes = {}
+    if position is not None:
+        attributes["current_position"] = position
+    if tilt is not None:
+        attributes["current_tilt_position"] = tilt
+    return State("cover.c", state, attributes)
+
+
+def cover_target(state: State) -> Target | None:
+    return scene_targets({"cover.c": state}, lambda e: [])["cover.c"]
+
+
+def test_cover_position_wins_over_mode() -> None:
+    # Saved as "open" at position 0: Home Assistant moves it to 0, i.e. closed.
+    target = cover_target(cover("open", 0))
+    assert target == Target(None, {"current_position": 0})
+    assert matches("cover.c", target, cover("closed", 3), Tolerances())
+    assert score("cover.c", target, cover("open", 20), Tolerances()) == pytest.approx(
+        (20 - 5) / 100
+    )
+
+
+def test_cover_without_position_compares_mode() -> None:
+    target = cover_target(cover("closed"))
+    assert target == OFF_TARGET
+    assert score("cover.c", target, cover("open", 30), Tolerances()) == 1.0
+    assert score("cover.c", target, cover("closing", 30), Tolerances()) == 1.0
+    assert matches("cover.c", target, cover("closed", 0), Tolerances())
+
+
+def test_cover_tilt_outside_tolerance() -> None:
+    target = cover_target(cover("closed", 0, 50))
+    assert score("cover.c", target, cover("closed", 0, 80), Tolerances()) == (
+        pytest.approx(0.25)
+    )
+    assert matches("cover.c", target, cover("closed", 0, 53), Tolerances())
+
+
+def test_score_takes_worst_dimension() -> None:
+    target = cover_target(cover("open", 50, 50))
+    # Position 20 off (0.15 beyond tolerance), tilt 50 off (0.45).
+    assert score("cover.c", target, cover("open", 70, 0), Tolerances()) == (
+        pytest.approx(0.45)
+    )
+
+
+def test_cover_without_tilt_skips_tilt() -> None:
+    target = cover_target(cover("open", 50, 50))
+    assert matches("cover.c", target, cover("open", 50), Tolerances())
+
+
+def test_opening_closing_targets() -> None:
+    assert cover_target(cover("opening")) == Target(True)
+    assert cover_target(cover("closing")) == OFF_TARGET
+
+
+def test_position_tolerance() -> None:
+    target = cover_target(cover("open", 50))
+    assert matches("cover.c", target, cover("open", 60), Tolerances(position=10))
+    assert not matches("cover.c", target, cover("open", 60), Tolerances())
+
+
+def test_is_moving() -> None:
+    assert is_moving(cover("opening"))
+    assert is_moving(cover("closing"))
+    assert not is_moving(cover("open", 50))
