@@ -18,13 +18,27 @@ from custom_components.scene_cycler.const import (
     CONF_INCLUDE_OFF,
     CONF_OFF_SCENE,
     CONF_POSITION_TOLERANCE,
+    CONF_ROOM_SCOPE,
     CONF_SCENES,
     CONF_WRAP,
     DEFAULT_OPTIONS,
     DOMAIN,
+    SCOPE_AREA,
+    SCOPE_SCENES,
 )
 
-from conftest import BRIGHT, EVENING, LED, NIGHT, SLEEP, setup_room
+from conftest import (
+    BLIND,
+    BRIGHT,
+    EVENING,
+    LAMP,
+    LED,
+    MOVIE,
+    NIGHT,
+    SLEEP,
+    TV,
+    setup_room,
+)
 
 SCENES_INPUT = {
     CONF_SCENES: [EVENING, BRIGHT],
@@ -78,7 +92,7 @@ async def test_user_flow(hass: HomeAssistant, area: str) -> None:
     )
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == "Living Room"
-    assert result["data"] == {CONF_AREA: area}
+    assert result["data"] == {CONF_AREA: area, CONF_ROOM_SCOPE: SCOPE_AREA}
     assert result["options"] == {
         **SCENES_INPUT,
         CONF_OFF_SCENE: SLEEP,
@@ -89,6 +103,41 @@ async def test_user_flow(hass: HomeAssistant, area: str) -> None:
     }
     await hass.async_block_till_done()
     assert hass.states.get("select.living_room_scene") is not None
+
+
+async def test_scenes_scope_excludes_offer_tracked_entities(
+    hass: HomeAssistant, area: str
+) -> None:
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": config_entries.SOURCE_USER}
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {
+            "name": "Living Room",
+            CONF_ROOM_SCOPE: SCOPE_SCENES,
+            CONF_AREA: area,
+            **SCENES_INPUT,
+            CONF_SCENES: [MOVIE],
+        },
+    )
+    assert result["step_id"] == "scenes_room"
+    excluded = next(
+        f for f in result["data_schema"].schema if f == CONF_EXCLUDED_LIGHTS
+    )
+    selector = result["data_schema"].schema[excluded]
+    assert selector.config["include_entities"] == sorted([BLIND, LAMP, TV])
+
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {
+            CONF_DEFAULT_SCENE: MOVIE,
+            CONF_BRIGHTNESS_TOLERANCE: 5,
+            CONF_POSITION_TOLERANCE: 5,
+        },
+    )
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["data"][CONF_ROOM_SCOPE] == SCOPE_SCENES
 
 
 async def test_off_scene_cannot_be_in_cycle(hass: HomeAssistant, area: str) -> None:

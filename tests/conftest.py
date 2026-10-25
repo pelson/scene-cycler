@@ -35,6 +35,7 @@ LAMP = "light.lamp"
 LED = "light.switch_led"
 TV = "input_boolean.tv"
 BLIND = "cover.blind"
+HALL = "light.hall"  # not in the living room's area
 
 BRIGHT = "scene.bright"
 EVENING = "scene.evening"
@@ -42,6 +43,8 @@ NIGHT = "scene.night"
 SLEEP = "scene.sleep"  # off scene: everything off but the lamp at 1
 STALE = "scene.stale"  # saved while the ceiling was unavailable
 MOVIE = "scene.movie"  # the lamp low, the TV on and the blind closed, tilted
+MOVIE_OFF = "scene.movie_off"  # off scene for MOVIE: everything off, blind open
+THROUGH = "scene.through"  # the lamp and the hall light: two areas
 
 
 @pytest.fixture(autouse=True)
@@ -136,7 +139,7 @@ async def area(hass: HomeAssistant, light_calls, cover_calls) -> str:
         original_name="LED",
     )
 
-    for light in (CEILING, LAMP, LED):
+    for light in (CEILING, LAMP, LED, HALL):
         hass.states.async_set(light, "off")
     hass.states.async_set(
         BLIND,
@@ -200,6 +203,23 @@ async def area(hass: HomeAssistant, light_calls, cover_calls) -> str:
                     },
                 },
                 {
+                    "id": "movie_off",
+                    "name": "Movie off",
+                    "entities": {
+                        LAMP: "off",
+                        TV: "off",
+                        BLIND: {"state": "open", "current_position": 100},
+                    },
+                },
+                {
+                    "id": "through",
+                    "name": "Through",
+                    "entities": {
+                        LAMP: {"state": "on", "brightness": 120},
+                        HALL: {"state": "on", "brightness": 255},
+                    },
+                },
+                {
                     "id": "sleep",
                     "name": "Sleep",
                     "entities": {
@@ -215,12 +235,15 @@ async def area(hass: HomeAssistant, light_calls, cover_calls) -> str:
 
 
 async def setup_room(
-    hass: HomeAssistant, area_id: str, **options: Any
+    hass: HomeAssistant,
+    area_id: str,
+    data: dict[str, Any] | None = None,
+    **options: Any,
 ) -> MockConfigEntry:
     entry = MockConfigEntry(
         domain=DOMAIN,
         title="Living Room",
-        data={CONF_AREA: area_id},
+        data={CONF_AREA: area_id, **(data or {})},
         options={
             **DEFAULT_OPTIONS,
             CONF_SCENES: [BRIGHT, EVENING, NIGHT],

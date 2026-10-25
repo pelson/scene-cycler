@@ -9,7 +9,7 @@ from homeassistant.core import HomeAssistant, State, split_entity_id
 from homeassistant.helpers import device_registry as dr, entity_registry as er
 
 from .const import INDICATOR_WORDS
-from .matching import LIGHT
+from .matching import LIGHT, scene_targets
 
 # Scenes made in the scene editor or scenes.yaml live on this entity platform,
 # stored in hass.data by the `homeassistant` scene platform. Each entity holds
@@ -100,11 +100,28 @@ def room_lights(hass: HomeAssistant, area_id: str, excluded: list[str]) -> set[s
     return expand(hass, area_lights(hass, area_id)) - set(excluded)
 
 
-def suggested_excludes(hass: HomeAssistant, area_id: str) -> list[str]:
-    """Lights in the area whose names end like an indicator's ("... LED", "... Backlight")."""
+def tracked_entities(
+    hass: HomeAssistant, scenes: list[str], excluded: list[str]
+) -> set[str]:
+    """What a room made of its scenes compares: everything they set, groups expanded.
+
+    Entities a scene leaves unset (saved as unavailable) and unreadable scenes
+    add nothing.
+    """
+    entities: set[str] = set()
+    for scene in scenes:
+        if (states := scene_states(hass, scene)) is None:
+            continue
+        targets = scene_targets(states, lambda e: group_members(hass, e))
+        entities |= {e for e, target in targets.items() if target is not None}
+    return expand(hass, entities) - set(excluded)
+
+
+def suggested_excludes(hass: HomeAssistant, entity_ids: set[str]) -> list[str]:
+    """Entities whose names end like an indicator's ("... LED", "... Backlight")."""
     entity_registry = er.async_get(hass)
     suggestions = []
-    for entity_id in expand(hass, area_lights(hass, area_id)):
+    for entity_id in entity_ids:
         entry = entity_registry.async_get(entity_id)
         state = hass.states.get(entity_id)
         names = [

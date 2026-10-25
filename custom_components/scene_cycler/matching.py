@@ -87,6 +87,10 @@ _DOMAINS = {
 # Entities of other domains in a scene are applied with it but not compared.
 COMPARED_DOMAINS = frozenset(_DOMAINS)
 
+# What a room without an off scene turns off, and counts as on or off. Covers
+# are left as they are.
+SWITCHABLE_DOMAINS = frozenset({LIGHT, "switch", "input_boolean"})
+
 
 def _domain(entity_id: str) -> _Domain:
     return _DOMAINS[split_entity_id(entity_id)[0]]

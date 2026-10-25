@@ -6,6 +6,7 @@
         "description": "Pick the room's area and the scenes to cycle through, in order. Only scenes made in the scene editor (or scenes.yaml) can be used, because the integration reads what they set the lights to.",
         "data": {
           "name": "Name",
+          "room_scope": "What makes up the room",
           "area": "Area",
           "scenes": "Scenes to cycle through",
           "off_scene": "Off scene",
@@ -14,6 +15,7 @@
           "follow_default": "Follow default changes"
         },
         "data_description": {
+          "room_scope": "Its area's lights: a scene also turns off the area's lights it doesn't set. What its scenes set: a scene only touches what it lists, and the room is off when its off scene matches (or, without one, when everything its scenes switch is off). This can't be changed later.",
           "area": "The room's lights are this area's lights, with light groups expanded to their members.",
           "scenes": "Next and previous step through these in this order.",
           "off_scene": "Applied to turn the room off. Leave empty to turn off all of the room's lights instead. It can't also be one of the scenes to cycle through.",
@@ -34,6 +36,22 @@
         "data_description": {
           "default_scene": "Applied when the room is turned on, and by the first press after the lights were changed outside a scene. Automations can change it.",
           "excluded_lights": "Lights in the area that aren't room lighting, such as indicator LEDs. Ones that look like indicators are suggested.",
+          "brightness_tolerance": "How far a light's brightness can be from the scene's and still count as matching.",
+          "position_tolerance": "How far a cover's position or tilt can be from the scene's and still count as matching."
+        }
+      },
+      "scenes_room": {
+        "title": "Default and entities",
+        "description": "The room is what its scenes set, apart from anything excluded here. Applying a scene changes only what it lists, and only that is compared.",
+        "data": {
+          "default_scene": "Default scene",
+          "excluded_lights": "Entities to leave out",
+          "brightness_tolerance": "Brightness tolerance",
+          "position_tolerance": "Position tolerance"
+        },
+        "data_description": {
+          "default_scene": "Applied when the room is turned on, and by the first press after it was changed outside a scene. Automations can change it.",
+          "excluded_lights": "Entities the scenes set that shouldn't count, such as indicator LEDs. Ones that look like indicators are suggested.",
           "brightness_tolerance": "How far a light's brightness can be from the scene's and still count as matching.",
           "position_tolerance": "How far a cover's position or tilt can be from the scene's and still count as matching."
         }
@@ -81,11 +99,35 @@
           "brightness_tolerance": "How far a light's brightness can be from the scene's and still count as matching.",
           "position_tolerance": "How far a cover's position or tilt can be from the scene's and still count as matching."
         }
+      },
+      "scenes_room": {
+        "title": "Default and entities",
+        "description": "The room is what its scenes set, apart from anything excluded here.",
+        "data": {
+          "default_scene": "Default scene",
+          "excluded_lights": "Entities to leave out",
+          "brightness_tolerance": "Brightness tolerance",
+          "position_tolerance": "Position tolerance"
+        },
+        "data_description": {
+          "default_scene": "Saving a different default here replaces one set by an automation.",
+          "excluded_lights": "Entities the scenes set that shouldn't count, such as indicator LEDs.",
+          "brightness_tolerance": "How far a light's brightness can be from the scene's and still count as matching.",
+          "position_tolerance": "How far a cover's position or tilt can be from the scene's and still count as matching."
+        }
       }
     },
     "error": {
       "no_scenes": "Pick at least one scene.",
       "off_scene_in_cycle": "The off scene can't also be one of the scenes to cycle through."
+    }
+  },
+  "selector": {
+    "room_scope": {
+      "options": {
+        "area": "Its area's lights",
+        "scenes": "What its scenes set"
+      }
     }
   },
   "entity": {

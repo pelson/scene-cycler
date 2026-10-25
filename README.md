@@ -12,7 +12,7 @@ You add one entry per room. Each entry creates a device with:
 |---|---|
 | `select.<room>_scene` | The scene the room is showing, `Off` or `Manual`. Choosing a scene applies it; choosing `Off` turns the room off. Attribute: `scene_entity_id` |
 | `select.<room>_default_scene` | The default scene. Automations change it with `select.select_option` or `scene_cycler.set_default`. |
-| `switch.<room>_lights` | On while any of the room's lights are on. Turning it on applies the default (if the room is off); turning it off turns the room off. |
+| `switch.<room>_lights` | On while any of the room's lights are on (for a room made of what its scenes set: while it isn't off). Turning it on applies the default (if the room is off); turning it off turns the room off. |
 | `binary_sensor.<room>_modified` | On while the room is `Manual`. Attributes: `last_scene`, `differences` (the lights that don't match it) |
 | `button.<room>_next_scene`, `_previous_scene`, `_apply_default` | For dashboards |
 
@@ -72,7 +72,12 @@ actions:
 
 ## How it works
 
-**The room's lights** are the lights in the room's area (set directly or through their device), with light groups expanded to their members, minus the lights you exclude. When you set the room up, lights whose names end in LED, backlight or indicator (such as "Switch LED") are suggested for exclusion.
+**What makes up the room** is chosen when you add it, and can't be changed later:
+
+- *Its area's lights* (the default): the lights in the room's area (set directly or through their device), with light groups expanded to their members, minus the lights you exclude. A scene fully describes the room, as below.
+- *What its scenes set*: everything the room's scenes and off scene set, with light groups expanded, minus what you exclude. It can include lights in other areas, and nothing else in the area is picked up. Applying a scene changes only what it lists, and only that is compared. The room is off when its off scene matches. Without an off scene, it's off when everything its scenes switch (lights, switches, input booleans) is off, and turning it off turns those off and leaves covers as they are. The room's switch follows straight away: on as soon as a scene is applied, off as soon as the room is turned off.
+
+When you set the room up, entities whose names end in LED, backlight or indicator (such as "Switch LED") are suggested for exclusion.
 
 **Scenes** are ordinary Home Assistant scenes made in the scene editor (or `scenes.yaml`). Scene Cycler reads what each one sets the lights to. A scene fully describes the room: room lights it doesn't set are turned off when it's applied, and must be off for the room to count as showing it. A light the scene saved as unavailable (it was offline when the scene was saved) is left alone: Home Assistant doesn't change it when applying the scene, so Scene Cycler neither turns it off nor compares it.
 

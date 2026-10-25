@@ -26,7 +26,7 @@ ignore = ["E501"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["custom_components"]
-known-local-folder = ["conftest"]
+known-local-folder = ["conftest", "test_room"]
 force-sort-within-sections = true
 combine-as-imports = true
 known-third-party = ["homeassistant"]

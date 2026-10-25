@@ -446,7 +446,7 @@ async def test_light_groups_in_area_are_expanded(
     hass.states.async_set(group.entity_id, "on", {"entity_id": [LAMP]})
     await settle(hass, freezer)
     assert hass.states.get(SCENE).state == "Evening"
-    assert hass.config_entries.async_entries(DOMAIN)[0].runtime_data.lights == {
+    assert hass.config_entries.async_entries(DOMAIN)[0].runtime_data.tracked == {
         CEILING,
         LAMP,
     }

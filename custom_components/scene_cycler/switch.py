@@ -39,7 +39,7 @@ class RoomSwitch(SceneCyclerEntity, SwitchEntity):
 
     @callback
     def _is_room_light(self, event_data: EventStateChangedData) -> bool:
-        return event_data["entity_id"] in self.room.lights
+        return event_data["entity_id"] in self.room.tracked
 
     @callback
     def _on_light_changed(self, event: Event[EventStateChangedData]) -> None:

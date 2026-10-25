@@ -4,6 +4,7 @@
 
 ### Added
 
+- **Rooms made of what their scenes set.** When adding a room you can now choose *What its scenes set* instead of *Its area's lights*. Applying a scene then changes only what it lists, nothing else in the area is turned off or compared, and a scene can include lights in other areas. The room is off when its off scene matches or, without one, when everything its scenes switch is off. Existing rooms are unchanged.
 - **Covers in scenes are compared.** A scene's shutters and blinds count towards whether the room is showing it: their position and tilt, within a new *Position tolerance* (5% by default), or open/closed if the scene doesn't set a position. Covers get up to 90 s to finish moving, so a room doesn't show `Manual` while its shutters are still on their way. A cover stopped half way shows the room as `Manual`.
 - **Switches and input booleans in scenes are compared.** A scene that turns on a switch (for example a light on a relay) now only counts as showing when that switch is on too, and switching it off shows the room as `Manual`. Before, only lights were compared.
 - **Cycling that stops at the ends, for up/down buttons.** Turn off the new *Wrap round* option and next stops at the last scene instead of going back to the first, and previous stops at the first (or at off, if it's in the cycle). Existing rooms keep wrapping round.

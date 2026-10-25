@@ -8,6 +8,11 @@ from typing import Final
 DOMAIN = "scene_cycler"
 
 CONF_AREA = "area"
+# What makes up the room: its area's lights, or what its scenes set. Kept in
+# the entry's data, since it decides whether the area is the unique ID.
+CONF_ROOM_SCOPE = "room_scope"
+SCOPE_AREA = "area"
+SCOPE_SCENES = "scenes"
 CONF_SCENES = "scenes"
 CONF_DEFAULT_SCENE = "default_scene"
 CONF_OFF_SCENE = "off_scene"

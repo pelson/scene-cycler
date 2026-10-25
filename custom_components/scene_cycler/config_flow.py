@@ -23,12 +23,15 @@ from .const import (
     CONF_INCLUDE_OFF,
     CONF_OFF_SCENE,
     CONF_POSITION_TOLERANCE,
+    CONF_ROOM_SCOPE,
     CONF_SCENES,
     CONF_WRAP,
     DEFAULT_OPTIONS,
     DOMAIN,
+    SCOPE_AREA,
+    SCOPE_SCENES,
 )
-from .lights import area_lights, expand, suggested_excludes
+from .lights import area_lights, expand, suggested_excludes, tracked_entities
 
 # Only scenes from the scene editor or scenes.yaml can be read for matching.
 SCENE_SELECTOR = selector.EntitySelectorConfig(
@@ -58,7 +61,37 @@ def _validate_scenes(user_input: dict[str, Any]) -> dict[str, str]:
     return {}
 
 
-def _room_schema(hass: HomeAssistant, scenes: list[str], area_id: str) -> vol.Schema:
+SCOPE_SELECTOR = selector.SelectSelector(
+    selector.SelectSelectorConfig(
+        options=[SCOPE_AREA, SCOPE_SCENES],
+        translation_key=CONF_ROOM_SCOPE,
+        mode=selector.SelectSelectorMode.LIST,
+    )
+)
+
+
+def _room_entities(
+    hass: HomeAssistant, data: dict[str, Any], options: dict[str, Any]
+) -> set[str]:
+    """What the room could be made of: its area's lights, or what its scenes set."""
+    if data.get(CONF_ROOM_SCOPE, SCOPE_AREA) == SCOPE_AREA:
+        return expand(hass, area_lights(hass, data[CONF_AREA]))
+    scenes = list(options[CONF_SCENES])
+    if off_scene := options.get(CONF_OFF_SCENE):
+        scenes.append(off_scene)
+    return tracked_entities(hass, scenes, [])
+
+
+def _room_step(data: dict[str, Any]) -> str:
+    """The room step's id, whose description depends on what makes up the room."""
+    return (
+        "room" if data.get(CONF_ROOM_SCOPE, SCOPE_AREA) == SCOPE_AREA else "scenes_room"
+    )
+
+
+def _room_schema(
+    hass: HomeAssistant, scenes: list[str], entities: set[str]
+) -> vol.Schema:
     return vol.Schema(
         {
             vol.Required(CONF_DEFAULT_SCENE): selector.SelectSelector(
@@ -74,7 +107,7 @@ def _room_schema(hass: HomeAssistant, scenes: list[str], area_id: str) -> vol.Sc
             ),
             vol.Optional(CONF_EXCLUDED_LIGHTS): selector.EntitySelector(
                 selector.EntitySelectorConfig(
-                    include_entities=sorted(expand(hass, area_lights(hass, area_id))),
+                    include_entities=sorted(entities),
                     multiple=True,
                 )
             ),
@@ -120,17 +153,17 @@ class SceneCyclerConfigFlow(ConfigFlow, domain=DOMAIN):
                 self._data = {
                     CONF_NAME: user_input[CONF_NAME],
                     CONF_AREA: user_input[CONF_AREA],
+                    CONF_ROOM_SCOPE: user_input[CONF_ROOM_SCOPE],
                 }
                 self._options = {
-                    k: v
-                    for k, v in user_input.items()
-                    if k not in (CONF_NAME, CONF_AREA)
+                    k: v for k, v in user_input.items() if k not in self._data
                 }
                 return await self.async_step_room()
 
         schema = vol.Schema(
             {
                 vol.Required(CONF_NAME): selector.TextSelector(),
+                vol.Required(CONF_ROOM_SCOPE, default=SCOPE_AREA): SCOPE_SELECTOR,
                 vol.Required(CONF_AREA): selector.AreaSelector(),
             }
         ).extend(SCENES_SCHEMA.schema)
@@ -145,11 +178,10 @@ class SceneCyclerConfigFlow(ConfigFlow, domain=DOMAIN):
     async def async_step_room(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
-        area_id = self._data[CONF_AREA]
         if user_input is not None:
             return self.async_create_entry(
                 title=self._data[CONF_NAME],
-                data={CONF_AREA: area_id},
+                data={k: v for k, v in self._data.items() if k != CONF_NAME},
                 options={
                     **DEFAULT_OPTIONS,
                     **self._options,
@@ -159,19 +191,21 @@ class SceneCyclerConfigFlow(ConfigFlow, domain=DOMAIN):
             )
 
         scenes = self._options[CONF_SCENES]
-        area = ar.async_get(self.hass).async_get_area(area_id)
+        entities = _room_entities(self.hass, self._data, self._options)
         return self.async_show_form(
-            step_id="room",
+            step_id=_room_step(self._data),
             data_schema=self.add_suggested_values_to_schema(
-                _room_schema(self.hass, scenes, area_id),
+                _room_schema(self.hass, scenes, entities),
                 {
                     **DEFAULT_OPTIONS,
                     CONF_DEFAULT_SCENE: scenes[0],
-                    CONF_EXCLUDED_LIGHTS: suggested_excludes(self.hass, area_id),
+                    CONF_EXCLUDED_LIGHTS: suggested_excludes(self.hass, entities),
                 },
             ),
-            description_placeholders={"area": area.name if area else area_id},
+            description_placeholders={"area": _area_name(self.hass, self._data)},
         )
+
+    async_step_scenes_room = async_step_room
 
     @staticmethod
     @callback
@@ -215,16 +249,26 @@ class SceneCyclerOptionsFlow(OptionsFlow):
 
         scenes = self._options[CONF_SCENES]
         default = self._options.get(CONF_DEFAULT_SCENE)
-        area_id = self.config_entry.data[CONF_AREA]
-        area = ar.async_get(self.hass).async_get_area(area_id)
+        data = dict(self.config_entry.data)
         return self.async_show_form(
-            step_id="room",
+            step_id=_room_step(data),
             data_schema=self.add_suggested_values_to_schema(
-                _room_schema(self.hass, scenes, area_id),
+                _room_schema(
+                    self.hass, scenes, _room_entities(self.hass, data, self._options)
+                ),
                 {
                     **self._options,
                     CONF_DEFAULT_SCENE: default if default in scenes else scenes[0],
                 },
             ),
-            description_placeholders={"area": area.name if area else area_id},
+            description_placeholders={"area": _area_name(self.hass, data)},
         )
+
+    async_step_scenes_room = async_step_room
+
+
+def _area_name(hass: HomeAssistant, data: dict[str, Any]) -> str:
+    if (area_id := data.get(CONF_AREA)) is None:
+        return ""
+    area = ar.async_get(hass).async_get_area(area_id)
+    return area.name if area else area_id
