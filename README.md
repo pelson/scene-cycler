@@ -40,6 +40,36 @@ Each action targets a room's scene select, its device, or its area once the devi
     scene: scene.living_room_evening
 ```
 
+## Events
+
+Whenever a room applies a scene or turns off itself, it fires `scene_cycler_scene_applied`. Use it for things a scene can't express, such as starting music. The event carries the context of the action that caused it.
+
+| Field | Value |
+|---|---|
+| `entry_id` | The room's config entry |
+| `room` | The room's name |
+| `scene` | The scene's entity ID, or `Off` |
+| `previous` | What the room was showing just before: a scene's entity ID, `Off`, `Manual`, or `null` if not yet known |
+| `source` | `next`, `previous`, `select`, `apply_default`, `turn_off` or `follow_default` |
+
+It isn't fired when something else changes the lights, for example an automation calling `scene.turn_on` directly.
+
+```yaml
+# Start a playlist when the living room goes to its evening scene
+triggers:
+  - trigger: event
+    event_type: scene_cycler_scene_applied
+    event_data:
+      scene: scene.living_room_evening
+actions:
+  - action: media_player.play_media
+    target:
+      entity_id: media_player.living_room
+    data:
+      media_content_type: favorite_item_id
+      media_content_id: FV:2/12
+```
+
 ## How it works
 
 **The room's lights** are the lights in the room's area (set directly or through their device), with light groups expanded to their members, minus the lights you exclude. When you set the room up, lights whose names end in LED, backlight or indicator (such as "Switch LED") are suggested for exclusion.

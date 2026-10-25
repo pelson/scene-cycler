@@ -14,7 +14,7 @@ from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import SceneCyclerConfigEntry
-from .const import DOMAIN, MANUAL, OFF
+from .const import DOMAIN, MANUAL, OFF, SOURCE_SELECT
 from .entity import SceneCyclerEntity
 
 
@@ -100,7 +100,7 @@ class SceneSelect(_RoomSceneSelect):
 
     async def async_select_option(self, option: str) -> None:
         if option == OFF:
-            await self.room.async_turn_off(context=self._context)
+            await self.room.async_turn_off(context=self._context, source=SOURCE_SELECT)
         elif option == MANUAL:
             raise ServiceValidationError(
                 translation_domain=DOMAIN, translation_key="cannot_select_manual"

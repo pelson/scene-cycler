@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Added
+
+- **An event when a room applies a scene.** `scene_cycler_scene_applied` is fired whenever a room applies a scene or turns off, with the scene, what the room showed before, and what caused it (next, previous, the select, the default, turning off, or following a new default). Automations can use it for things a scene can't do, such as starting music.
+
 ### Fixed
 
 - **Scenes saved while a light was offline now match.** A scene saved while one of its lights was unavailable stores that light as `unavailable`. Home Assistant leaves such a light alone when applying the scene, but Scene Cycler expected it to be off, so the room showed `Manual` whenever that light was on. It's now left out of the comparison, and isn't turned off when the scene is applied.

@@ -27,6 +27,15 @@ DEFAULT_OPTIONS = {
 OFF: Final = "Off"
 MANUAL: Final = "Manual"
 
+# Fired whenever a room applies a scene (or Off) itself, with what caused it.
+EVENT_SCENE_APPLIED: Final = "scene_cycler_scene_applied"
+SOURCE_NEXT: Final = "next"
+SOURCE_PREVIOUS: Final = "previous"
+SOURCE_SELECT: Final = "select"
+SOURCE_APPLY_DEFAULT: Final = "apply_default"
+SOURCE_TURN_OFF: Final = "turn_off"
+SOURCE_FOLLOW_DEFAULT: Final = "follow_default"
+
 # Lights report a change in several updates (Z2M sends one per attribute),
 # so the room is only compared once they've been quiet this long. After the
 # integration applies a scene, it also waits out the transition.
