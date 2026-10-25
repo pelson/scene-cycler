@@ -4,6 +4,7 @@
 
 ### Added
 
+- **The closest scene, when the room is `Manual`.** The scene select now has `scores` (how far the room is from each scene, 0 being a match), `closest_scene` and `closest_score`, and the modified sensor has `closest_scene`. So a dashboard can show "Evening (modified)". A new *Closest scene threshold* option sets how far off a scene can be and still count as closest.
 - **Rooms without an area.** A room made of what its scenes set no longer needs an area, so it can be a floor or the whole house, and there can be several of them alongside the per-room ones.
 - **Rooms made of what their scenes set.** When adding a room you can now choose *What its scenes set* instead of *Its area's lights*. Applying a scene then changes only what it lists, nothing else in the area is turned off or compared, and a scene can include lights in other areas. The room is off when its off scene matches or, without one, when everything its scenes switch is off. Existing rooms are unchanged.
 - **Covers in scenes are compared.** A scene's shutters and blinds count towards whether the room is showing it: their position and tilt, within a new *Position tolerance* (5% by default), or open/closed if the scene doesn't set a position. Covers get up to 90 s to finish moving, so a room doesn't show `Manual` while its shutters are still on their way. A cover stopped half way shows the room as `Manual`.

@@ -12,6 +12,7 @@ from custom_components.scene_cycler.config_flow import SceneCyclerConfigFlow
 from custom_components.scene_cycler.const import (
     CONF_AREA,
     CONF_BRIGHTNESS_TOLERANCE,
+    CONF_CLOSEST_THRESHOLD,
     CONF_DEFAULT_SCENE,
     CONF_EXCLUDED_LIGHTS,
     CONF_FOLLOW_DEFAULT,
@@ -88,6 +89,7 @@ async def test_user_flow(hass: HomeAssistant, area: str) -> None:
             CONF_EXCLUDED_LIGHTS: [LED],
             CONF_BRIGHTNESS_TOLERANCE: 5,
             CONF_POSITION_TOLERANCE: 10,
+            CONF_CLOSEST_THRESHOLD: 0.3,
         },
     )
     assert result["type"] is FlowResultType.CREATE_ENTRY
@@ -100,6 +102,7 @@ async def test_user_flow(hass: HomeAssistant, area: str) -> None:
         CONF_EXCLUDED_LIGHTS: [LED],
         CONF_BRIGHTNESS_TOLERANCE: 5,
         CONF_POSITION_TOLERANCE: 10,
+        CONF_CLOSEST_THRESHOLD: 0.3,
     }
     await hass.async_block_till_done()
     assert hass.states.get("select.living_room_scene") is not None
@@ -251,7 +254,7 @@ async def test_migration_fills_new_options(hass: HomeAssistant, area: str) -> No
     old_options = {
         k: v
         for k, v in DEFAULT_OPTIONS.items()
-        if k not in (CONF_WRAP, CONF_POSITION_TOLERANCE)
+        if k not in (CONF_WRAP, CONF_POSITION_TOLERANCE, CONF_CLOSEST_THRESHOLD)
     }
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -267,6 +270,7 @@ async def test_migration_fills_new_options(hass: HomeAssistant, area: str) -> No
 
     assert entry.options[CONF_WRAP] is True
     assert entry.options[CONF_POSITION_TOLERANCE] == 5
+    assert entry.options[CONF_CLOSEST_THRESHOLD] == 0.5
     assert entry.minor_version == SceneCyclerConfigFlow.MINOR_VERSION
     assert hass.states.get("select.living_room_scene") is not None
 

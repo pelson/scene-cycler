@@ -95,8 +95,14 @@ class SceneSelect(_RoomSceneSelect):
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
-        current = self.room.current
-        return {"scene_entity_id": current if current in self.room.scenes else None}
+        room = self.room
+        current = room.current
+        return {
+            "scene_entity_id": current if current in room.scenes else None,
+            "closest_scene": room.closest,
+            "closest_score": room.scores.get(room.closest) if room.closest else None,
+            "scores": room.scores,
+        }
 
     async def async_select_option(self, option: str) -> None:
         if option == OFF:

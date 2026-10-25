@@ -17,6 +17,7 @@ import voluptuous as vol
 from .const import (
     CONF_AREA,
     CONF_BRIGHTNESS_TOLERANCE,
+    CONF_CLOSEST_THRESHOLD,
     CONF_DEFAULT_SCENE,
     CONF_EXCLUDED_LIGHTS,
     CONF_FOLLOW_DEFAULT,
@@ -113,6 +114,11 @@ def _room_schema(
             ),
             vol.Required(CONF_BRIGHTNESS_TOLERANCE): _PERCENT_SELECTOR,
             vol.Required(CONF_POSITION_TOLERANCE): _PERCENT_SELECTOR,
+            vol.Optional(CONF_CLOSEST_THRESHOLD): selector.NumberSelector(
+                selector.NumberSelectorConfig(
+                    min=0, max=1, step=0.05, mode=selector.NumberSelectorMode.SLIDER
+                )
+            ),
         }
     )
 
@@ -136,7 +142,7 @@ def _scene_name(hass: HomeAssistant, scene: str) -> str:
 class SceneCyclerConfigFlow(ConfigFlow, domain=DOMAIN):
     VERSION = 1
     # Bumped whenever an option is added; async_migrate_entry fills it in.
-    MINOR_VERSION = 3
+    MINOR_VERSION = 4
 
     def __init__(self) -> None:
         self._data: dict[str, Any] = {}

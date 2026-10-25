@@ -22,6 +22,7 @@ CONF_FOLLOW_DEFAULT = "follow_default"
 CONF_EXCLUDED_LIGHTS = "excluded_lights"
 CONF_BRIGHTNESS_TOLERANCE = "brightness_tolerance"
 CONF_POSITION_TOLERANCE = "position_tolerance"
+CONF_CLOSEST_THRESHOLD = "closest_threshold"
 
 DEFAULT_OPTIONS = {
     CONF_INCLUDE_OFF: False,
@@ -30,6 +31,7 @@ DEFAULT_OPTIONS = {
     CONF_EXCLUDED_LIGHTS: [],
     CONF_BRIGHTNESS_TOLERANCE: 5,  # % of full brightness
     CONF_POSITION_TOLERANCE: 5,  # % of a cover's travel or tilt
+    CONF_CLOSEST_THRESHOLD: 0.5,  # 0 = exactly the scene, 1 = anything
 }
 
 # What the room is showing when it isn't showing one of its scenes.

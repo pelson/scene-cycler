@@ -40,6 +40,7 @@ from homeassistant.util import dt as dt_util
 from .const import (
     CONF_AREA,
     CONF_BRIGHTNESS_TOLERANCE,
+    CONF_CLOSEST_THRESHOLD,
     CONF_DEFAULT_SCENE,
     CONF_EXCLUDED_LIGHTS,
     CONF_FOLLOW_DEFAULT,
@@ -76,6 +77,8 @@ from .matching import (
     SWITCHABLE_DOMAINS,
     Target,
     Tolerances,
+    closeness,
+    closest,
     comparable,
     cycle_step,
     differences,
@@ -110,6 +113,7 @@ class Room:
             position=options[CONF_POSITION_TOLERANCE],
         )
         self.default: str = options[CONF_DEFAULT_SCENE]
+        self.closest_threshold: float = options[CONF_CLOSEST_THRESHOLD]
 
         # A scene entity id, OFF, MANUAL, or None until the lights are known.
         self.current: str | None = None
@@ -119,6 +123,10 @@ class Room:
         self.differences: list[str] = []
         # What the room compares: its area's lights, or what its scenes set.
         self.tracked: set[str] = set()
+        # How far the room is from each scene (0 is a match; None if it can't
+        # tell), and the nearest one within the threshold.
+        self.scores: dict[str, float | None] = {}
+        self.closest: str | None = None
 
         self._store: Store[dict[str, Any]] = Store(
             hass, STORAGE_VERSION, f"{DOMAIN}.{entry.entry_id}"
@@ -440,6 +448,7 @@ class Room:
         self._refresh_tracked()
         self._check_scenes_readable()
 
+        pending: set[str] = set()
         if (transit := self._transit) is not None:
             get_state = self.hass.states.get
             now = dt_util.utcnow()
@@ -453,6 +462,7 @@ class Room:
                 # stragglers run out of time if nothing changes first.
                 if (when := transit.next_check(get_state, now)) is not None:
                     self._schedule_evaluate(when)
+                self._update_scores(pending)
                 self._notify()
                 return
 
@@ -462,7 +472,20 @@ class Room:
             self.differences = mismatched
             if current not in (OFF, MANUAL):
                 self.last_scene = current
+        self._update_scores(pending)
         self._notify()
+
+    def _update_scores(self, pending: set[str]) -> None:
+        """How close the room is to each scene, leaving out what's still on its way."""
+        self.scores = {
+            scene: closeness(targets, self.hass.states.get, self.tolerances, pending)
+            if (targets := self._room_targets(scene)) is not None
+            else None
+            for scene in self.scenes
+        }
+        self.closest = closest(
+            self.scores, self.scenes, self.last_scene, self.closest_threshold
+        )
 
     def _match(self) -> tuple[str, list[str]]:
         """What the room is showing, and how it differs from the last scene if nothing."""

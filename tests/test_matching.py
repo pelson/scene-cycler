@@ -10,6 +10,8 @@ from custom_components.scene_cycler.matching import (
     OFF_TARGET,
     Target,
     Tolerances,
+    closeness,
+    closest,
     cycle_step,
     differences,
     is_moving,
@@ -246,6 +248,41 @@ def test_position_tolerance() -> None:
     target = cover_target(cover("open", 50))
     assert matches("cover.c", target, cover("open", 60), Tolerances(position=10))
     assert not matches("cover.c", target, cover("open", 60), Tolerances())
+
+
+def test_closeness_mean_over_entities() -> None:
+    states = {
+        "light.a": State("light.a", "on", {"brightness": 100}),
+        "switch.b": State("switch.b", "off"),
+    }
+    targets = {"light.a": lit(100), "switch.b": Target(True)}
+    assert closeness(targets, states.get, Tolerances()) == 0.5
+
+
+def test_closeness_skips_unavailable_and_transit() -> None:
+    states = {
+        "light.a": State("light.a", "on", {"brightness": 100}),
+        "switch.b": State("switch.b", "unavailable"),
+    }
+    targets = {"light.a": lit(100), "switch.b": Target(True)}
+    assert closeness(targets, states.get, Tolerances()) == 0.0
+    assert closeness(
+        {"light.a": OFF_TARGET}, states.get, Tolerances(), {"light.a"}
+    ) is (None)
+
+
+def test_closest_threshold_and_ties() -> None:
+    scores = {"s1": 0.2, "s2": 0.2, "s3": 0.6}
+    scenes = ["s1", "s2", "s3"]
+    assert closest(scores, scenes, "s2", 0.5) == "s2"
+    assert closest(scores, scenes, None, 0.5) == "s1"
+    assert closest(scores, scenes, "s3", 0.5) == "s1"
+    assert closest(scores, scenes, None, 0.1) is None
+    assert closest({"s1": 0.3, "s2": 0.1}, ["s1", "s2"], "s1", 0.5) == "s2"
+
+
+def test_closest_none_when_nothing_comparable() -> None:
+    assert closest({"s1": None}, ["s1"], None, 1.0) is None
 
 
 def test_is_moving() -> None:

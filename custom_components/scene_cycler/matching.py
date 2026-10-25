@@ -231,6 +231,50 @@ def differences(
     )
 
 
+def closeness(
+    targets: Mapping[str, Target | None],
+    get_state: Callable[[str], State | None],
+    tolerances: Tolerances,
+    skip: Collection[str] = (),
+) -> float | None:
+    """How far the room is from a scene: the mean score of the entities it sets.
+
+    0 is an exact match. Entities that can't be compared, are unset, or are
+    in `skip` don't count; None if nothing does.
+    """
+    scores = [
+        score(entity_id, target, state, tolerances)
+        for entity_id, target in targets.items()
+        if target is not None
+        and entity_id not in skip
+        and comparable(state := get_state(entity_id))
+    ]
+    return sum(scores) / len(scores) if scores else None
+
+
+def closest(
+    scores: Mapping[str, float | None],
+    scenes: list[str],
+    last_scene: str | None,
+    threshold: float,
+) -> str | None:
+    """The scene the room is nearest to, if it's within the threshold.
+
+    Ties go to the last scene the room showed, then to the earliest in the list.
+    """
+    candidates = [
+        scene
+        for scene in scenes
+        if (value := scores.get(scene)) is not None and value <= threshold
+    ]
+    if not candidates:
+        return None
+    return min(
+        candidates,
+        key=lambda scene: (scores[scene], scene != last_scene, scenes.index(scene)),
+    )
+
+
 def cycle_step(
     scenes: list[str],
     default: str,

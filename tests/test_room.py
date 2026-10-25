@@ -19,6 +19,7 @@ from pytest_homeassistant_custom_component.common import (
 
 from custom_components.scene_cycler.const import (
     APPLY_TIMEOUT,
+    CONF_CLOSEST_THRESHOLD,
     CONF_DEFAULT_SCENE,
     CONF_FOLLOW_DEFAULT,
     CONF_INCLUDE_OFF,
@@ -174,6 +175,36 @@ async def test_scene_sets_and_matches_an_input_boolean(
     await settle(hass, freezer)
     assert hass.states.get(SCENE).state == "Manual"
     assert hass.states.get(MODIFIED).attributes["differences"] == [TV]
+
+
+async def test_closest_scene_and_scores(
+    hass: HomeAssistant, area: str, freezer: FrozenDateTimeFactory
+) -> None:
+    await setup_room(hass, area)
+    await call(hass, "apply_default")  # Bright: the lamp at 200
+    await settle(hass, freezer)
+    hass.states.async_set(LAMP, "on", {"brightness": 180})
+    await settle(hass, freezer)
+
+    assert hass.states.get(SCENE).state == "Manual"
+    assert hass.states.get(MODIFIED).attributes["closest_scene"] == BRIGHT
+    attributes = hass.states.get(SCENE).attributes
+    scores = attributes["scores"]
+    assert set(scores) == {BRIGHT, EVENING, NIGHT}
+    assert scores[BRIGHT] < scores[EVENING]
+    assert attributes["closest_scene"] == BRIGHT
+    assert attributes["closest_score"] == scores[BRIGHT]
+
+
+async def test_closest_threshold(
+    hass: HomeAssistant, area: str, freezer: FrozenDateTimeFactory
+) -> None:
+    await setup_room(hass, area, **{CONF_CLOSEST_THRESHOLD: 0})
+    await call(hass, "apply_default")
+    await settle(hass, freezer)
+    hass.states.async_set(LAMP, "on", {"brightness": 180})
+    await settle(hass, freezer)
+    assert hass.states.get(SCENE).attributes["closest_scene"] is None
 
 
 async def test_scene_applied_event(hass: HomeAssistant, area: str) -> None:

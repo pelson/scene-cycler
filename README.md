@@ -10,10 +10,10 @@ You add one entry per room. Each entry creates a device with:
 
 | Entity | Shows / does |
 |---|---|
-| `select.<room>_scene` | The scene the room is showing, `Off` or `Manual`. Choosing a scene applies it; choosing `Off` turns the room off. Attribute: `scene_entity_id` |
+| `select.<room>_scene` | The scene the room is showing, `Off` or `Manual`. Choosing a scene applies it; choosing `Off` turns the room off. Attributes: `scene_entity_id`, `closest_scene`, `closest_score`, `scores` (see below) |
 | `select.<room>_default_scene` | The default scene. Automations change it with `select.select_option` or `scene_cycler.set_default`. |
 | `switch.<room>_lights` | On while any of the room's lights are on (for a room made of what its scenes set: while it isn't off). Turning it on applies the default (if the room is off); turning it off turns the room off. |
-| `binary_sensor.<room>_modified` | On while the room is `Manual`. Attributes: `last_scene`, `differences` (the lights that don't match it) |
+| `binary_sensor.<room>_modified` | On while the room is `Manual`. Attributes: `last_scene`, `differences` (the lights that don't match it), `closest_scene` |
 | `button.<room>_next_scene`, `_previous_scene`, `_apply_default` | For dashboards |
 
 ## Actions
@@ -93,6 +93,12 @@ With *Wrap round* off, the list is a ladder for up/down buttons instead: next st
 - Otherwise it shows `Manual`. The next press of next or previous applies the default.
 
 Lights that are unavailable or unknown are left out of the comparison.
+
+**How close the room is to each scene.** The scene select's `scores` attribute gives, for each scene, how far the room is from it: 0 is an exact match and 1 is entirely different. An entity in the wrong state (off instead of on) counts 1; otherwise it counts by how far its brightness or position is beyond the tolerance, as a fraction of the full range. The scene's score is the average over its entities. `closest_scene` is the scene with the lowest score, if that's at most the room's *Closest scene threshold* (0.5 by default), otherwise `null`; ties go to the scene the room last showed. A dashboard can show something like "Evening (modified)":
+
+```yaml
+{{ state_attr('binary_sensor.living_room_modified', 'closest_scene') }} (modified)
+```
 
 **Changing the default** with *Follow default changes* on: if the room is showing the old default, it switches to the new one straight away. With it off, or if the room is showing anything else, the new default takes effect the next time it's applied. A default changed by an automation persists across restarts. Choosing a different default in the room's options replaces it.
 

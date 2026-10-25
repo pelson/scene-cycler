@@ -33,4 +33,5 @@ class ModifiedSensor(SceneCyclerEntity, BinarySensorEntity):
         return {
             "last_scene": self.room.last_scene,
             "differences": self.room.differences,
+            "closest_scene": self.room.closest,
         }
