@@ -32,14 +32,16 @@
           "excluded_lights": "Lights to leave out",
           "brightness_tolerance": "Brightness tolerance",
           "position_tolerance": "Position tolerance",
-          "closest_threshold": "Closest scene threshold"
+          "closest_threshold": "Closest scene threshold",
+          "manual_next": "From Manual, next and previous"
         },
         "data_description": {
           "default_scene": "Applied when the room is turned on, and by the first press after the lights were changed outside a scene. Automations can change it.",
           "excluded_lights": "Lights in the area that aren't room lighting, such as indicator LEDs. Ones that look like indicators are suggested.",
           "brightness_tolerance": "How far a light's brightness can be from the scene's and still count as matching.",
           "position_tolerance": "How far a cover's position or tilt can be from the scene's and still count as matching.",
-          "closest_threshold": "How different the room can be from a scene (0 = exactly the same, 1 = anything) and still count as closest to it. Shown as the closest_scene attribute."
+          "closest_threshold": "How different the room can be from a scene (0 = exactly the same, 1 = anything) and still count as closest to it. Shown as the closest_scene attribute.",
+          "manual_next": "After the room was changed outside a scene, a press either applies the default, or steps on from the scene the room is closest to (the default if none is close enough)."
         }
       },
       "scenes_room": {
@@ -50,14 +52,16 @@
           "excluded_lights": "Entities to leave out",
           "brightness_tolerance": "Brightness tolerance",
           "position_tolerance": "Position tolerance",
-          "closest_threshold": "Closest scene threshold"
+          "closest_threshold": "Closest scene threshold",
+          "manual_next": "From Manual, next and previous"
         },
         "data_description": {
           "default_scene": "Applied when the room is turned on, and by the first press after it was changed outside a scene. Automations can change it.",
           "excluded_lights": "Entities the scenes set that shouldn't count, such as indicator LEDs. Ones that look like indicators are suggested.",
           "brightness_tolerance": "How far a light's brightness can be from the scene's and still count as matching.",
           "position_tolerance": "How far a cover's position or tilt can be from the scene's and still count as matching.",
-          "closest_threshold": "How different the room can be from a scene (0 = exactly the same, 1 = anything) and still count as closest to it. Shown as the closest_scene attribute."
+          "closest_threshold": "How different the room can be from a scene (0 = exactly the same, 1 = anything) and still count as closest to it. Shown as the closest_scene attribute.",
+          "manual_next": "After the room was changed outside a scene, a press either applies the default, or steps on from the scene the room is closest to (the default if none is close enough)."
         }
       }
     },
@@ -97,14 +101,16 @@
           "excluded_lights": "Lights to leave out",
           "brightness_tolerance": "Brightness tolerance",
           "position_tolerance": "Position tolerance",
-          "closest_threshold": "Closest scene threshold"
+          "closest_threshold": "Closest scene threshold",
+          "manual_next": "From Manual, next and previous"
         },
         "data_description": {
           "default_scene": "Saving a different default here replaces one set by an automation.",
           "excluded_lights": "Lights in the area that aren't room lighting, such as indicator LEDs.",
           "brightness_tolerance": "How far a light's brightness can be from the scene's and still count as matching.",
           "position_tolerance": "How far a cover's position or tilt can be from the scene's and still count as matching.",
-          "closest_threshold": "How different the room can be from a scene (0 = exactly the same, 1 = anything) and still count as closest to it. Shown as the closest_scene attribute."
+          "closest_threshold": "How different the room can be from a scene (0 = exactly the same, 1 = anything) and still count as closest to it. Shown as the closest_scene attribute.",
+          "manual_next": "After the room was changed outside a scene, a press either applies the default, or steps on from the scene the room is closest to (the default if none is close enough)."
         }
       },
       "scenes_room": {
@@ -115,14 +121,16 @@
           "excluded_lights": "Entities to leave out",
           "brightness_tolerance": "Brightness tolerance",
           "position_tolerance": "Position tolerance",
-          "closest_threshold": "Closest scene threshold"
+          "closest_threshold": "Closest scene threshold",
+          "manual_next": "From Manual, next and previous"
         },
         "data_description": {
           "default_scene": "Saving a different default here replaces one set by an automation.",
           "excluded_lights": "Entities the scenes set that shouldn't count, such as indicator LEDs.",
           "brightness_tolerance": "How far a light's brightness can be from the scene's and still count as matching.",
           "position_tolerance": "How far a cover's position or tilt can be from the scene's and still count as matching.",
-          "closest_threshold": "How different the room can be from a scene (0 = exactly the same, 1 = anything) and still count as closest to it. Shown as the closest_scene attribute."
+          "closest_threshold": "How different the room can be from a scene (0 = exactly the same, 1 = anything) and still count as closest to it. Shown as the closest_scene attribute.",
+          "manual_next": "After the room was changed outside a scene, a press either applies the default, or steps on from the scene the room is closest to (the default if none is close enough)."
         }
       }
     },
@@ -136,6 +144,12 @@
       "options": {
         "area": "Its area's lights",
         "scenes": "What its scenes set"
+      }
+    },
+    "manual_next": {
+      "options": {
+        "default": "Apply the default",
+        "after_closest": "Step on from the closest scene"
       }
     }
   },

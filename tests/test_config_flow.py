@@ -17,6 +17,7 @@ from custom_components.scene_cycler.const import (
     CONF_EXCLUDED_LIGHTS,
     CONF_FOLLOW_DEFAULT,
     CONF_INCLUDE_OFF,
+    CONF_MANUAL_NEXT,
     CONF_OFF_SCENE,
     CONF_POSITION_TOLERANCE,
     CONF_ROOM_SCOPE,
@@ -24,6 +25,7 @@ from custom_components.scene_cycler.const import (
     CONF_WRAP,
     DEFAULT_OPTIONS,
     DOMAIN,
+    MANUAL_NEXT_AFTER_CLOSEST,
     SCOPE_AREA,
     SCOPE_SCENES,
 )
@@ -90,6 +92,7 @@ async def test_user_flow(hass: HomeAssistant, area: str) -> None:
             CONF_BRIGHTNESS_TOLERANCE: 5,
             CONF_POSITION_TOLERANCE: 10,
             CONF_CLOSEST_THRESHOLD: 0.3,
+            CONF_MANUAL_NEXT: MANUAL_NEXT_AFTER_CLOSEST,
         },
     )
     assert result["type"] is FlowResultType.CREATE_ENTRY
@@ -103,6 +106,7 @@ async def test_user_flow(hass: HomeAssistant, area: str) -> None:
         CONF_BRIGHTNESS_TOLERANCE: 5,
         CONF_POSITION_TOLERANCE: 10,
         CONF_CLOSEST_THRESHOLD: 0.3,
+        CONF_MANUAL_NEXT: MANUAL_NEXT_AFTER_CLOSEST,
     }
     await hass.async_block_till_done()
     assert hass.states.get("select.living_room_scene") is not None
@@ -254,7 +258,13 @@ async def test_migration_fills_new_options(hass: HomeAssistant, area: str) -> No
     old_options = {
         k: v
         for k, v in DEFAULT_OPTIONS.items()
-        if k not in (CONF_WRAP, CONF_POSITION_TOLERANCE, CONF_CLOSEST_THRESHOLD)
+        if k
+        not in (
+            CONF_WRAP,
+            CONF_POSITION_TOLERANCE,
+            CONF_CLOSEST_THRESHOLD,
+            CONF_MANUAL_NEXT,
+        )
     }
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -271,6 +281,7 @@ async def test_migration_fills_new_options(hass: HomeAssistant, area: str) -> No
     assert entry.options[CONF_WRAP] is True
     assert entry.options[CONF_POSITION_TOLERANCE] == 5
     assert entry.options[CONF_CLOSEST_THRESHOLD] == 0.5
+    assert entry.options[CONF_MANUAL_NEXT] == "default"
     assert entry.minor_version == SceneCyclerConfigFlow.MINOR_VERSION
     assert hass.states.get("select.living_room_scene") is not None
 

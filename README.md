@@ -90,7 +90,7 @@ With *Wrap round* off, the list is a ladder for up/down buttons instead: next st
 - If the lights still match the scene the room was showing, nothing changes.
 - If they all match another of the room's scenes, the room shows that one. So an automation that calls `scene.turn_on` directly keeps the room correct.
 - If all the room's lights are off, or they match the off scene, the room shows `Off`.
-- Otherwise it shows `Manual`. The next press of next or previous applies the default.
+- Otherwise it shows `Manual`. The next press of next or previous applies the default, or, with *From Manual, next and previous* set to *Step on from the closest scene*, steps on from the scene the room is closest to (see below), as if it were showing it. If no scene is close enough, it applies the default.
 
 Lights that are unavailable or unknown are left out of the comparison.
 

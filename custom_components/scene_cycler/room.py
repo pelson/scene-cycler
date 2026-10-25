@@ -45,6 +45,7 @@ from .const import (
     CONF_EXCLUDED_LIGHTS,
     CONF_FOLLOW_DEFAULT,
     CONF_INCLUDE_OFF,
+    CONF_MANUAL_NEXT,
     CONF_OFF_SCENE,
     CONF_POSITION_TOLERANCE,
     CONF_ROOM_SCOPE,
@@ -53,6 +54,7 @@ from .const import (
     DOMAIN,
     EVENT_SCENE_APPLIED,
     MANUAL,
+    MANUAL_NEXT_AFTER_CLOSEST,
     OFF,
     SCOPE_AREA,
     SCOPE_SCENES,
@@ -114,6 +116,7 @@ class Room:
         )
         self.default: str = options[CONF_DEFAULT_SCENE]
         self.closest_threshold: float = options[CONF_CLOSEST_THRESHOLD]
+        self.manual_next: str = options[CONF_MANUAL_NEXT]
 
         # A scene entity id, OFF, MANUAL, or None until the lights are known.
         self.current: str | None = None
@@ -347,6 +350,14 @@ class Room:
             self.hass.states.get, dt_util.utcnow()
         ):
             return self._transit.applied
+        # Optionally, a room that's been changed a little steps on from the
+        # scene it's closest to rather than starting again from the default.
+        if (
+            self.current == MANUAL
+            and self.manual_next == MANUAL_NEXT_AFTER_CLOSEST
+            and self.closest is not None
+        ):
+            return self.closest
         return self.current
 
     async def _turn_off(

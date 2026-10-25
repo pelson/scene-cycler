@@ -23,6 +23,10 @@ CONF_EXCLUDED_LIGHTS = "excluded_lights"
 CONF_BRIGHTNESS_TOLERANCE = "brightness_tolerance"
 CONF_POSITION_TOLERANCE = "position_tolerance"
 CONF_CLOSEST_THRESHOLD = "closest_threshold"
+# What next/previous step from while the room is Manual.
+CONF_MANUAL_NEXT = "manual_next"
+MANUAL_NEXT_DEFAULT = "default"  # apply the default
+MANUAL_NEXT_AFTER_CLOSEST = "after_closest"  # step on from the closest scene
 
 DEFAULT_OPTIONS = {
     CONF_INCLUDE_OFF: False,
@@ -32,6 +36,7 @@ DEFAULT_OPTIONS = {
     CONF_BRIGHTNESS_TOLERANCE: 5,  # % of full brightness
     CONF_POSITION_TOLERANCE: 5,  # % of a cover's travel or tilt
     CONF_CLOSEST_THRESHOLD: 0.5,  # 0 = exactly the scene, 1 = anything
+    CONF_MANUAL_NEXT: MANUAL_NEXT_DEFAULT,
 }
 
 # What the room is showing when it isn't showing one of its scenes.

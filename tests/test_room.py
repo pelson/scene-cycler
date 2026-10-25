@@ -23,6 +23,7 @@ from custom_components.scene_cycler.const import (
     CONF_DEFAULT_SCENE,
     CONF_FOLLOW_DEFAULT,
     CONF_INCLUDE_OFF,
+    CONF_MANUAL_NEXT,
     CONF_OFF_SCENE,
     CONF_POSITION_TOLERANCE,
     CONF_SCENES,
@@ -30,6 +31,7 @@ from custom_components.scene_cycler.const import (
     COVER_START_GRACE,
     DOMAIN,
     EVENT_SCENE_APPLIED,
+    MANUAL_NEXT_AFTER_CLOSEST,
 )
 
 from conftest import (
@@ -205,6 +207,59 @@ async def test_closest_threshold(
     hass.states.async_set(LAMP, "on", {"brightness": 180})
     await settle(hass, freezer)
     assert hass.states.get(SCENE).attributes["closest_scene"] is None
+
+
+AFTER_CLOSEST = {CONF_MANUAL_NEXT: MANUAL_NEXT_AFTER_CLOSEST}
+
+
+async def test_after_closest_steps_from_the_closest_scene(
+    hass: HomeAssistant, area: str, freezer: FrozenDateTimeFactory
+) -> None:
+    await setup_room(hass, area, **AFTER_CLOSEST)
+    await select_scene(hass, "Evening")  # the lamp at 80
+    await settle(hass, freezer)
+    hass.states.async_set(LAMP, "on", {"brightness": 110})
+    await settle(hass, freezer)
+    assert hass.states.get(SCENE).state == "Manual"
+    assert hass.states.get(MODIFIED).attributes["closest_scene"] == EVENING
+
+    await call(hass, "next")  # on from Evening, not back to the default
+    assert hass.states.get(SCENE).state == "Night"
+
+
+async def test_after_closest_without_closest_applies_default(
+    hass: HomeAssistant, area: str, freezer: FrozenDateTimeFactory
+) -> None:
+    await setup_room(hass, area, **AFTER_CLOSEST, **{CONF_CLOSEST_THRESHOLD: 0})
+    await select_scene(hass, "Evening")
+    await settle(hass, freezer)
+    hass.states.async_set(LAMP, "on", {"brightness": 110})
+    await settle(hass, freezer)
+    assert hass.states.get(SCENE).state == "Manual"
+
+    await call(hass, "next")
+    assert hass.states.get(SCENE).state == "Bright"
+
+
+async def test_after_closest_on_a_ladder(
+    hass: HomeAssistant, area: str, freezer: FrozenDateTimeFactory
+) -> None:
+    await setup_room(
+        hass, area, **AFTER_CLOSEST, **{CONF_WRAP: False, CONF_INCLUDE_OFF: True}
+    )
+    await select_scene(hass, "Night")  # the lamp at 10, the top rung
+    await settle(hass, freezer)
+    hass.states.async_set(LAMP, "on", {"brightness": 30})
+    await settle(hass, freezer)
+    assert hass.states.get(MODIFIED).attributes["closest_scene"] == NIGHT
+
+    await call(hass, "next")  # the top stays put
+    assert hass.states.get(SCENE).state == "Night"
+    await settle(hass, freezer)
+    hass.states.async_set(LAMP, "on", {"brightness": 30})
+    await settle(hass, freezer)
+    await call(hass, "previous")
+    assert hass.states.get(SCENE).state == "Evening"
 
 
 async def test_scene_applied_event(hass: HomeAssistant, area: str) -> None:

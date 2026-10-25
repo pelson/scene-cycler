@@ -22,6 +22,7 @@ from .const import (
     CONF_EXCLUDED_LIGHTS,
     CONF_FOLLOW_DEFAULT,
     CONF_INCLUDE_OFF,
+    CONF_MANUAL_NEXT,
     CONF_OFF_SCENE,
     CONF_POSITION_TOLERANCE,
     CONF_ROOM_SCOPE,
@@ -29,6 +30,8 @@ from .const import (
     CONF_WRAP,
     DEFAULT_OPTIONS,
     DOMAIN,
+    MANUAL_NEXT_AFTER_CLOSEST,
+    MANUAL_NEXT_DEFAULT,
     SCOPE_AREA,
     SCOPE_SCENES,
 )
@@ -119,6 +122,13 @@ def _room_schema(
                     min=0, max=1, step=0.05, mode=selector.NumberSelectorMode.SLIDER
                 )
             ),
+            vol.Optional(CONF_MANUAL_NEXT): selector.SelectSelector(
+                selector.SelectSelectorConfig(
+                    options=[MANUAL_NEXT_DEFAULT, MANUAL_NEXT_AFTER_CLOSEST],
+                    translation_key=CONF_MANUAL_NEXT,
+                    mode=selector.SelectSelectorMode.LIST,
+                )
+            ),
         }
     )
 
@@ -142,7 +152,7 @@ def _scene_name(hass: HomeAssistant, scene: str) -> str:
 class SceneCyclerConfigFlow(ConfigFlow, domain=DOMAIN):
     VERSION = 1
     # Bumped whenever an option is added; async_migrate_entry fills it in.
-    MINOR_VERSION = 4
+    MINOR_VERSION = 5
 
     def __init__(self) -> None:
         self._data: dict[str, Any] = {}
