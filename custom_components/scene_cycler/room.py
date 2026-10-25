@@ -415,6 +415,12 @@ class Room:
             now,
             transition,
         )
+        # Entities already at their target won't report a change, so they
+        # count as arrived from the start.
+        for entity_id in self._transit.targets:
+            self._transit.note(
+                entity_id, self.hass.states.get(entity_id), self.tolerances
+            )
         self._schedule_evaluate(self._hold_until)
         self._notify()
 
@@ -530,7 +536,8 @@ class Room:
             if split_entity_id(e)[0] in SWITCHABLE_DOMAINS
             and comparable(state := self.hass.states.get(e))
         ]
-        return all(state.state != STATE_ON for state in states)
+        # With nothing that switches (a room of covers), that says nothing.
+        return bool(states) and all(state.state != STATE_ON for state in states)
 
     def _matches(self, scene: str) -> bool:
         targets = self._room_targets(scene)

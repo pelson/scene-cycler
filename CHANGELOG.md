@@ -2,7 +2,7 @@
 
 ## 0.2.0
 
-The first release of the [pelson/scene-cycler](https://github.com/pelson/scene-cycler) fork of Scene Cycler. Existing rooms keep working as before; everything new is opt-in apart from the fixes and the per-light arrival tracking.
+The first release of the [pelson/scene-cycler](https://github.com/pelson/scene-cycler) fork of Scene Cycler. Existing rooms keep working as before; everything new is opt-in apart from the fixes, the per-light arrival tracking, and switches, input booleans and covers now being compared.
 
 ### Added
 
@@ -17,6 +17,7 @@ The first release of the [pelson/scene-cycler](https://github.com/pelson/scene-c
 
 ### Changed
 
+- **Existing rooms now compare the switches, input booleans and covers their scenes set.** If one of your scenes sets a switch or a cover, the room only counts as showing it when that switch or cover matches too, and changing it shows the room as `Manual`.
 - **Each light is followed on its way to a scene.** After applying a scene, Scene Cycler used to wait up to 10 s for all the lights before comparing any of them. Now each light is compared as soon as it has reached the scene, so a light someone changes straight afterwards shows the room as `Manual` at once, while lights still on their way (up to 10 s, plus any transition) are still waited for. A press while a scene is still being set steps on from that scene, even if the room has meanwhile gone to `Manual`.
 
 ### Fixed

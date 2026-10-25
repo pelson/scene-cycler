@@ -706,6 +706,23 @@ async def test_position_tolerance(
     assert hass.states.get(SCENE).state == "Movie"
 
 
+async def test_light_already_there_counts_as_arrived(
+    hass: HomeAssistant, area: str, freezer: FrozenDateTimeFactory
+) -> None:
+    await setup_room(hass, area)
+    await select_scene(hass, "Night")  # the ceiling off, the lamp at 10
+    await settle(hass, freezer)
+    lights_ignore_commands(hass, LAMP)
+
+    # Evening: the ceiling is already off, so nothing reports it arriving;
+    # the lamp is slow to get to 80.
+    await call(hass, "previous")
+    assert hass.states.get(SCENE).state == "Evening"
+    hass.states.async_set(CEILING, "on", {"brightness": 255})  # someone
+    await settle(hass, freezer)
+    assert hass.states.get(SCENE).state == "Manual"
+
+
 async def test_outside_change_after_arrival_shows_at_once(
     hass: HomeAssistant, area: str, freezer: FrozenDateTimeFactory
 ) -> None:

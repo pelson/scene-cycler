@@ -45,6 +45,7 @@ STALE = "scene.stale"  # saved while the ceiling was unavailable
 MOVIE = "scene.movie"  # the lamp low, the TV on and the blind closed, tilted
 MOVIE_OFF = "scene.movie_off"  # off scene for MOVIE: everything off, blind open
 THROUGH = "scene.through"  # the lamp and the hall light: two areas
+BLINDS_DOWN = "scene.blinds_down"  # only the blind
 
 
 @pytest.fixture(autouse=True)
@@ -210,6 +211,11 @@ async def area(hass: HomeAssistant, light_calls, cover_calls) -> str:
                         TV: "off",
                         BLIND: {"state": "open", "current_position": 100},
                     },
+                },
+                {
+                    "id": "blinds_down",
+                    "name": "Blinds down",
+                    "entities": {BLIND: {"state": "closed", "current_position": 0}},
                 },
                 {
                     "id": "through",

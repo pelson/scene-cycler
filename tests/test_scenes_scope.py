@@ -16,6 +16,7 @@ from custom_components.scene_cycler.const import (
 
 from conftest import (
     BLIND,
+    BLINDS_DOWN,
     BRIGHT,
     CEILING,
     EVENING,
@@ -25,6 +26,7 @@ from conftest import (
     MOVIE_OFF,
     THROUGH,
     TV,
+    set_cover,
     settle,
     setup_room,
 )
@@ -129,6 +131,22 @@ async def test_switch_follows_without_lag(
 
     hass.states.async_set(LAMP, "on", {"brightness": 100})
     await hass.async_block_till_done()
+    assert hass.states.get(SWITCH).state == "on"
+
+
+async def test_room_of_covers_only_is_not_always_off(
+    hass: HomeAssistant, area: str, freezer: FrozenDateTimeFactory
+) -> None:
+    # Nothing in it switches, so "everything that switches is off" says nothing.
+    set_cover(hass, BLIND, current_position=0)
+    await setup_room(
+        hass,
+        area,
+        SCENES_DATA,
+        **{CONF_SCENES: [BLINDS_DOWN], CONF_DEFAULT_SCENE: BLINDS_DOWN},
+    )
+    await settle(hass, freezer)
+    assert hass.states.get(SCENE).state == "Blinds down"
     assert hass.states.get(SWITCH).state == "on"
 
 
