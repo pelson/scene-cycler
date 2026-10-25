@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## 0.2.0
+
+The first release of the [pelson/scene-cycler](https://github.com/pelson/scene-cycler) fork of Scene Cycler. Existing rooms keep working as before; everything new is opt-in apart from the fixes and the per-light arrival tracking.
 
 ### Added
 

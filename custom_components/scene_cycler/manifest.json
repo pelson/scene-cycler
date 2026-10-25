@@ -4,10 +4,10 @@
   "codeowners": ["@pmaciocia"],
   "config_flow": true,
   "dependencies": ["scene"],
-  "documentation": "https://github.com/pmaciocia/scene-cycler",
+  "documentation": "https://github.com/pelson/scene-cycler",
   "integration_type": "helper",
   "iot_class": "calculated",
-  "issue_tracker": "https://github.com/pmaciocia/scene-cycler/issues",
+  "issue_tracker": "https://github.com/pelson/scene-cycler/issues",
   "requirements": [],
-  "version": "0.1.3"
+  "version": "0.2.0"
 }

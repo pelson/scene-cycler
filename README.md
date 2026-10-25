@@ -1,5 +1,7 @@
 # Scene Cycler
 
+> This is a fork of [pmaciocia/scene-cycler](https://github.com/pmaciocia/scene-cycler) by Peter Maciocia. It adds switches and covers, rooms made of what their scenes set (with or without an area), per-light arrival tracking, cycling that stops at the ends, a closest-scene score, and an event when a scene is applied; see the [changelog](CHANGELOG.md). Changes are offered back upstream.
+
 A Home Assistant custom integration for room lighting scenes. Each room has an ordered list of scenes and a default:
 
 - A button can cycle through the scenes, turn the room on to its default, or turn it off.
@@ -110,7 +112,7 @@ Home Assistant doesn't have a public API for what a scene sets. Scene Cycler rea
 
 ### HACS
 
-1. In HACS, open the menu → **Custom repositories**, add `https://github.com/pmaciocia/scene-cycler` with type **Integration**.
+1. In HACS, open the menu → **Custom repositories**, add `https://github.com/pelson/scene-cycler` with type **Integration**. (For the original, use `https://github.com/pmaciocia/scene-cycler`. Both use the same integration domain, so rooms carry over when you switch.)
 2. Download **Scene Cycler** and restart Home Assistant.
 
 ### Manually
@@ -137,7 +139,7 @@ uv run ruff check custom_components tests
 
 1. Bump `version` in `custom_components/scene_cycler/manifest.json` and `pyproject.toml`.
 2. Add a `## <version>` section to `CHANGELOG.md` describing the changes for users.
-3. Commit, then push a matching tag: `git tag -a v0.1.1 -m v0.1.1 && git push origin v0.1.1`.
+3. Commit, then push a matching tag: `git tag -a v0.2.0 -m v0.2.0 && git push origin v0.2.0`.
 
 The release workflow checks the tag matches the manifest, then creates the GitHub release that HACS installs from, with that version's changelog section as its notes.
 
