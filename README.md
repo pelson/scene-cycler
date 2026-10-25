@@ -14,7 +14,7 @@ You add one entry per room. Each entry creates a device with:
 |---|---|
 | `select.<room>_scene` | The scene the room is showing, `Off` or `Manual`. Choosing a scene applies it; choosing `Off` turns the room off. Attributes: `scene_entity_id`, `closest_scene`, `closest_score`, `scores` (see below) |
 | `select.<room>_default_scene` | The default scene. Automations change it with `select.select_option` or `scene_cycler.set_default`. |
-| `switch.<room>_lights` | On while any of the room's lights are on (for a room made of what its scenes set: while it isn't off). Turning it on applies the default (if the room is off); turning it off turns the room off. |
+| `switch.<room>_lights` | On while any of the room's lights are on (with the *Scenes* scope: while it isn't off). Turning it on applies the default (if the room is off); turning it off turns the room off. |
 | `binary_sensor.<room>_modified` | On while the room is `Manual`. Attributes: `last_scene`, `differences` (the lights that don't match it), `closest_scene` |
 | `button.<room>_next_scene`, `_previous_scene`, `_apply_default` | For dashboards |
 
@@ -63,10 +63,10 @@ actions:
 
 ## How it works
 
-**What makes up the room** is chosen when you add it, and can't be changed later:
+**The scope** is chosen when you add it, and can't be changed later:
 
-- *Its area's lights* (the default): the lights in the room's area (set directly or through their device), with light groups expanded to their members, minus the lights you exclude. A scene fully describes the room, as below.
-- *What its scenes set*: everything the room's scenes and off scene set, with light groups expanded, minus what you exclude. It can include lights in other areas, and nothing else in the area is picked up. Applying a scene changes only what it lists, and only that is compared. The room is off when its off scene matches. Without an off scene, it's off when everything its scenes switch (lights, switches, input booleans) is off, and turning it off turns those off and leaves covers as they are. The room's switch follows straight away: on as soon as a scene is applied, off as soon as the room is turned off.
+- *Room: the lights in an area* (the default): the lights in the room's area (set directly or through their device), with light groups expanded to their members, minus the lights you exclude. A scene fully describes the room, as below.
+- *Scenes: whatever its scenes set*: everything its scenes and off scene set, with light groups expanded, minus what you exclude. It can include lights in other areas, and nothing else in the area is picked up. Applying a scene changes only what it lists, and only that is compared. The room is off when its off scene matches. Without an off scene, it's off when everything its scenes switch (lights, switches, input booleans) is off, and turning it off turns those off and leaves covers as they are. The room's switch follows straight away: on as soon as a scene is applied, off as soon as the room is turned off.
 
 When you set the room up, entities whose names end in LED, backlight or indicator (such as "Switch LED") are suggested for exclusion.
 
@@ -110,9 +110,9 @@ Copy `custom_components/scene_cycler` into `/config/custom_components/` and rest
 
 ### Set up
 
-Go to **Settings → Devices & services → Add integration → Scene Cycler** and add each room. You can change scenes, the default, excluded lights and the other settings later with the room's **Configure** button. What makes up the room and its area are fixed; to change them, delete the room and add it again.
+Go to **Settings → Devices & services → Add integration → Scene Cycler** and add each room. You can change scenes, the default, excluded lights and the other settings later with the room's **Configure** button. The scope and the area are fixed; to change them, delete the room and add it again.
 
-A room made of what its scenes set doesn't need an area, so it can be anything you cycle through scenes: a floor, or the whole house (a "calm mode" across every room). There can be several, and they can overlap: when one applies a scene, the others notice their lights changing, as for any outside change. Entity IDs follow the name you give it, such as `select.house_scene`. A room that's its area's lights needs its area, and each area can have one.
+With the *Scenes* scope there's no area to pick, so it can be anything you cycle through scenes: a floor, or the whole house (a "calm mode" across every room). There can be several, and they can overlap: when one applies a scene, the others notice their lights changing, as for any outside change. Entity IDs follow the name you give it, such as `select.house_scene`. With the *Room* scope you pick its area, and each area can have one.
 
 The room's device isn't put in its area, because Home Assistant would then repeat the area name in the entity IDs (`select.living_room_living_room_scene`). You can assign the area afterwards; the entity IDs won't change.
 
@@ -128,7 +128,7 @@ uv run ruff check custom_components tests
 
 1. Bump `version` in `custom_components/scene_cycler/manifest.json` and `pyproject.toml`.
 2. Add a `## <version>` section to `CHANGELOG.md` describing the changes for users.
-3. Commit, then push a matching tag: `git tag -a v0.2.1 -m v0.2.1 && git push origin v0.2.1`.
+3. Commit, then push a matching tag: `git tag -a v0.2.2 -m v0.2.2 && git push origin v0.2.2`.
 
 The release workflow checks the tag matches the manifest, then creates the GitHub release that HACS installs from, with that version's changelog section as its notes.
 

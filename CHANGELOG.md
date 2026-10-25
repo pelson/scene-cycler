@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.2
+
+### Changed
+
+- **Clearer setup.** Adding a room now starts with its name and its *Scope*: *Room: the lights in an area*, or *Scenes: whatever its scenes set*. The area is only asked for with the *Room* scope, on the next step with the scenes, so a *Scenes* entry is never asked for an area it doesn't use.
+
 ## 0.2.1
 
 ### Removed

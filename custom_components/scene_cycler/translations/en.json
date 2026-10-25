@@ -3,10 +3,19 @@
     "step": {
       "user": {
         "title": "Add a room",
-        "description": "Pick what makes up the room and the scenes to cycle through, in order. A room made of what its scenes set can be anything: a room, a floor, or the whole house. Only scenes made in the scene editor (or scenes.yaml) can be used, because the integration reads what they set the lights to.",
+        "description": "Name it, and choose its scope: a room (an area's lights), or whatever its scenes set, which can be a room, a floor, or the whole house.",
         "data": {
           "name": "Name",
-          "room_scope": "What makes up the room",
+          "room_scope": "Scope"
+        },
+        "data_description": {
+          "room_scope": "Room: the lights in an area, and a scene also turns off the area's lights it doesn't set. Scenes: a scene only touches what it lists, and it's off when its off scene matches (or, without one, when everything its scenes switch is off). This can't be changed later."
+        }
+      },
+      "scenes": {
+        "title": "Scenes",
+        "description": "Pick the scenes to cycle through, in order. Only scenes made in the scene editor (or scenes.yaml) can be used, because the integration reads what they set the lights to.",
+        "data": {
           "area": "Area",
           "scenes": "Scenes to cycle through",
           "off_scene": "Off scene",
@@ -15,8 +24,7 @@
           "follow_default": "Follow default changes"
         },
         "data_description": {
-          "room_scope": "Its area's lights: a scene also turns off the area's lights it doesn't set. What its scenes set: a scene only touches what it lists, and the room is off when its off scene matches (or, without one, when everything its scenes switch is off). This can't be changed later.",
-          "area": "For a room that's its area's lights: they're this area's lights, with light groups expanded to their members. Not used for a room made of what its scenes set.",
+          "area": "The room's lights are this area's lights, with light groups expanded to their members. Each area can have one room.",
           "scenes": "Next and previous step through these in this order.",
           "off_scene": "Applied to turn the room off. Leave empty to turn off all of the room's lights instead. It can't also be one of the scenes to cycle through.",
           "include_off": "Off comes after a full lap of the scenes, just before the default comes round again. Useful for rooms with a single button. Without wrapping round, off is below the first scene.",
@@ -67,8 +75,7 @@
     },
     "error": {
       "no_scenes": "Pick at least one scene.",
-      "off_scene_in_cycle": "The off scene can't also be one of the scenes to cycle through.",
-      "area_required": "Pick an area, or make the room of what its scenes set."
+      "off_scene_in_cycle": "The off scene can't also be one of the scenes to cycle through."
     },
     "abort": {
       "already_configured": "This area already has a room."
@@ -142,8 +149,8 @@
   "selector": {
     "room_scope": {
       "options": {
-        "area": "Its area's lights",
-        "scenes": "What its scenes set"
+        "area": "Room: the lights in an area",
+        "scenes": "Scenes: whatever its scenes set"
       }
     },
     "manual_next": {

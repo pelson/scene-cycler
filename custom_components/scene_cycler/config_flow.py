@@ -161,41 +161,52 @@ class SceneCyclerConfigFlow(ConfigFlow, domain=DOMAIN):
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
-        errors: dict[str, str] = {}
+        """The name, and the scope: a room (its area's lights) or its scenes."""
         if user_input is not None:
-            scope = user_input[CONF_ROOM_SCOPE]
-            area_id = user_input.get(CONF_AREA)
-            # Only a room that's its area's lights uses the area, and it's
-            # one per area. A room made of its scenes can be anything, a
-            # floor or the whole house, and several can overlap.
-            if scope == SCOPE_AREA:
-                if not area_id:
-                    errors = {CONF_AREA: "area_required"}
-                else:
-                    await self.async_set_unique_id(area_id)
-                    self._abort_if_unique_id_configured()
-            if not errors and not (errors := _validate_scenes(user_input)):
-                self._data = {
-                    CONF_NAME: user_input[CONF_NAME],
-                    CONF_ROOM_SCOPE: scope,
-                    **({CONF_AREA: area_id} if scope == SCOPE_AREA else {}),
-                }
-                self._options = {
-                    k: v
-                    for k, v in user_input.items()
-                    if k not in (CONF_NAME, CONF_ROOM_SCOPE, CONF_AREA)
-                }
-                return await self.async_step_room()
-
-        schema = vol.Schema(
-            {
-                vol.Required(CONF_NAME): selector.TextSelector(),
-                vol.Required(CONF_ROOM_SCOPE, default=SCOPE_AREA): SCOPE_SELECTOR,
-                vol.Optional(CONF_AREA): selector.AreaSelector(),
+            self._data = {
+                CONF_NAME: user_input[CONF_NAME],
+                CONF_ROOM_SCOPE: user_input[CONF_ROOM_SCOPE],
             }
-        ).extend(SCENES_SCHEMA.schema)
+            return await self.async_step_scenes()
+
         return self.async_show_form(
             step_id="user",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(CONF_NAME): selector.TextSelector(),
+                    vol.Required(CONF_ROOM_SCOPE, default=SCOPE_AREA): SCOPE_SELECTOR,
+                }
+            ),
+        )
+
+    async def async_step_scenes(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """The scenes, and for a room its area.
+
+        Only a room uses the area, and it's one per area. An entry made of
+        its scenes can be anything, a floor or the whole house, and several
+        can overlap.
+        """
+        room = self._data[CONF_ROOM_SCOPE] == SCOPE_AREA
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            if room:
+                await self.async_set_unique_id(user_input[CONF_AREA])
+                self._abort_if_unique_id_configured()
+            if not (errors := _validate_scenes(user_input)):
+                if room:
+                    self._data[CONF_AREA] = user_input[CONF_AREA]
+                self._options = {k: v for k, v in user_input.items() if k != CONF_AREA}
+                return await self.async_step_room()
+
+        schema = SCENES_SCHEMA
+        if room:
+            schema = vol.Schema(
+                {vol.Required(CONF_AREA): selector.AreaSelector()}
+            ).extend(SCENES_SCHEMA.schema)
+        return self.async_show_form(
+            step_id="scenes",
             data_schema=self.add_suggested_values_to_schema(
                 schema, user_input or DEFAULT_OPTIONS
             ),

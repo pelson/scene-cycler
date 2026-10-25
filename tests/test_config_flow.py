@@ -58,6 +58,26 @@ def suggested(result, key: str):
     raise KeyError(key)
 
 
+async def start(hass: HomeAssistant, name: str = "Living Room", scope=SCOPE_AREA):
+    """Get through the first step: the name and the scope."""
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": config_entries.SOURCE_USER}
+    )
+    assert result["step_id"] == "user"
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"name": name, CONF_ROOM_SCOPE: scope}
+    )
+    assert result["step_id"] == "scenes"
+    return result
+
+
+async def test_area_is_only_asked_for_a_room(hass: HomeAssistant, area: str) -> None:
+    room = await start(hass)
+    assert CONF_AREA in room["data_schema"].schema
+    scenes = await start(hass, "House", SCOPE_SCENES)
+    assert CONF_AREA not in scenes["data_schema"].schema
+
+
 async def test_user_flow(hass: HomeAssistant, area: str) -> None:
     # Lighting with "LED" in its name, which isn't an indicator.
     curtain = er.async_get(hass).async_get_or_create(
@@ -70,14 +90,9 @@ async def test_user_flow(hass: HomeAssistant, area: str) -> None:
     er.async_get(hass).async_update_entity(curtain.entity_id, area_id=area)
     hass.states.async_set(curtain.entity_id, "off", {"friendly_name": "LED Curtain"})
 
-    result = await hass.config_entries.flow.async_init(
-        DOMAIN, context={"source": config_entries.SOURCE_USER}
-    )
-    assert result["type"] is FlowResultType.FORM
-
+    result = await start(hass)
     result = await hass.config_entries.flow.async_configure(
-        result["flow_id"],
-        {"name": "Living Room", CONF_AREA: area, CONF_OFF_SCENE: SLEEP, **SCENES_INPUT},
+        result["flow_id"], {CONF_AREA: area, CONF_OFF_SCENE: SLEEP, **SCENES_INPUT}
     )
     assert result["step_id"] == "room"
     # The indicator LED is suggested for exclusion, and the first scene as default.
@@ -115,18 +130,9 @@ async def test_user_flow(hass: HomeAssistant, area: str) -> None:
 async def test_scenes_scope_excludes_offer_tracked_entities(
     hass: HomeAssistant, area: str
 ) -> None:
-    result = await hass.config_entries.flow.async_init(
-        DOMAIN, context={"source": config_entries.SOURCE_USER}
-    )
+    result = await start(hass, scope=SCOPE_SCENES)
     result = await hass.config_entries.flow.async_configure(
-        result["flow_id"],
-        {
-            "name": "Living Room",
-            CONF_ROOM_SCOPE: SCOPE_SCENES,
-            CONF_AREA: area,
-            **SCENES_INPUT,
-            CONF_SCENES: [MOVIE],
-        },
+        result["flow_id"], {**SCENES_INPUT, CONF_SCENES: [MOVIE]}
     )
     assert result["step_id"] == "scenes_room"
     excluded = next(
@@ -147,20 +153,11 @@ async def test_scenes_scope_excludes_offer_tracked_entities(
     assert result["data"][CONF_ROOM_SCOPE] == SCOPE_SCENES
 
 
-async def add_scenes_room(hass: HomeAssistant, name: str, **user_input):
-    """Add a room made of its scenes, without an area."""
-    result = await hass.config_entries.flow.async_init(
-        DOMAIN, context={"source": config_entries.SOURCE_USER}
-    )
+async def add_scenes_room(hass: HomeAssistant, name: str):
+    """Add an entry made of its scenes, which has no area."""
+    result = await start(hass, name, SCOPE_SCENES)
     result = await hass.config_entries.flow.async_configure(
-        result["flow_id"],
-        {
-            "name": name,
-            CONF_ROOM_SCOPE: SCOPE_SCENES,
-            **SCENES_INPUT,
-            CONF_SCENES: [MOVIE],
-            **user_input,
-        },
+        result["flow_id"], {**SCENES_INPUT, CONF_SCENES: [MOVIE]}
     )
     assert result["step_id"] == "scenes_room"
     return await hass.config_entries.flow.async_configure(
@@ -185,22 +182,10 @@ async def test_scenes_scope_without_area(hass: HomeAssistant, area: str) -> None
 
 async def test_two_scenes_entries_coexist(hass: HomeAssistant, area: str) -> None:
     first = await add_scenes_room(hass, "House")
-    second = await add_scenes_room(hass, "Upstairs", **{CONF_AREA: area})
+    second = await add_scenes_room(hass, "Upstairs")
     assert first["type"] is FlowResultType.CREATE_ENTRY
     assert second["type"] is FlowResultType.CREATE_ENTRY
-    # Even with an area, a room made of its scenes doesn't claim it.
     assert second["result"].unique_id is None
-
-
-async def test_area_scope_requires_area(hass: HomeAssistant, area: str) -> None:
-    result = await hass.config_entries.flow.async_init(
-        DOMAIN, context={"source": config_entries.SOURCE_USER}
-    )
-    result = await hass.config_entries.flow.async_configure(
-        result["flow_id"], {"name": "Living Room", **SCENES_INPUT}
-    )
-    assert result["type"] is FlowResultType.FORM
-    assert result["errors"] == {CONF_AREA: "area_required"}
 
 
 async def test_options_flow_without_area(hass: HomeAssistant, area: str) -> None:
@@ -225,17 +210,9 @@ async def test_options_flow_without_area(hass: HomeAssistant, area: str) -> None
 
 
 async def test_off_scene_cannot_be_in_cycle(hass: HomeAssistant, area: str) -> None:
-    result = await hass.config_entries.flow.async_init(
-        DOMAIN, context={"source": config_entries.SOURCE_USER}
-    )
+    result = await start(hass)
     result = await hass.config_entries.flow.async_configure(
-        result["flow_id"],
-        {
-            "name": "Living Room",
-            CONF_AREA: area,
-            CONF_OFF_SCENE: BRIGHT,
-            **SCENES_INPUT,
-        },
+        result["flow_id"], {CONF_AREA: area, CONF_OFF_SCENE: BRIGHT, **SCENES_INPUT}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {CONF_OFF_SCENE: "off_scene_in_cycle"}
@@ -243,11 +220,9 @@ async def test_off_scene_cannot_be_in_cycle(hass: HomeAssistant, area: str) -> N
 
 async def test_one_room_per_area(hass: HomeAssistant, area: str) -> None:
     await setup_room(hass, area)
-    result = await hass.config_entries.flow.async_init(
-        DOMAIN, context={"source": config_entries.SOURCE_USER}
-    )
+    result = await start(hass, "Again")
     result = await hass.config_entries.flow.async_configure(
-        result["flow_id"], {"name": "Again", CONF_AREA: area, **SCENES_INPUT}
+        result["flow_id"], {CONF_AREA: area, **SCENES_INPUT}
     )
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
