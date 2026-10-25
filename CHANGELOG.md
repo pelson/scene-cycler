@@ -7,6 +7,10 @@
 - **Cycling that stops at the ends, for up/down buttons.** Turn off the new *Wrap round* option and next stops at the last scene instead of going back to the first, and previous stops at the first (or at off, if it's in the cycle). Existing rooms keep wrapping round.
 - **An event when a room applies a scene.** `scene_cycler_scene_applied` is fired whenever a room applies a scene or turns off, with the scene, what the room showed before, and what caused it (next, previous, the select, the default, turning off, or following a new default). Automations can use it for things a scene can't do, such as starting music.
 
+### Changed
+
+- **Each light is followed on its way to a scene.** After applying a scene, Scene Cycler used to wait up to 10 s for all the lights before comparing any of them. Now each light is compared as soon as it has reached the scene, so a light someone changes straight afterwards shows the room as `Manual` at once, while lights still on their way (up to 10 s, plus any transition) are still waited for. A press while a scene is still being set steps on from that scene, even if the room has meanwhile gone to `Manual`.
+
 ### Fixed
 
 - **Scenes saved while a light was offline now match.** A scene saved while one of its lights was unavailable stores that light as `unavailable`. Home Assistant leaves such a light alone when applying the scene, but Scene Cycler expected it to be off, so the room showed `Manual` whenever that light was on. It's now left out of the comparison, and isn't turned off when the scene is applied.

@@ -4,9 +4,13 @@ from __future__ import annotations
 
 from freezegun.api import FrozenDateTimeFactory
 from homeassistant.const import EVENT_HOMEASSISTANT_STARTED
-from homeassistant.core import CoreState, HomeAssistant
+from homeassistant.core import CoreState, HomeAssistant, ServiceCall
 from homeassistant.exceptions import ServiceValidationError
-from homeassistant.helpers import entity_registry as er, issue_registry as ir
+from homeassistant.helpers import (
+    config_validation as cv,
+    entity_registry as er,
+    issue_registry as ir,
+)
 import pytest
 from pytest_homeassistant_custom_component.common import (
     async_capture_events,
@@ -451,14 +455,25 @@ async def test_reload_after_starting_before_home_assistant_is_up(
     assert "Unable to remove unknown job listener" not in caplog.text
 
 
-def lights_ignore_commands(hass: HomeAssistant) -> None:
-    """Make the lights slow: commands are accepted but nothing changes yet."""
+def lights_ignore_commands(hass: HomeAssistant, *only: str) -> None:
+    """Make lights slow: commands are accepted but nothing changes yet.
 
-    async def ignore(call) -> None:
-        pass
+    With entity ids, only those lights are slow; the others follow at once.
+    """
 
-    hass.services.async_register("light", "turn_on", ignore)
-    hass.services.async_register("light", "turn_off", ignore)
+    def handler(state: str):
+        async def handle(call: ServiceCall) -> None:
+            for entity_id in cv.ensure_list(call.data["entity_id"]):
+                if only and entity_id not in only:
+                    brightness = (
+                        call.data.get("brightness", 255) if state == "on" else None
+                    )
+                    hass.states.async_set(entity_id, state, {"brightness": brightness})
+
+        return handle
+
+    hass.services.async_register("light", "turn_on", handler("on"))
+    hass.services.async_register("light", "turn_off", handler("off"))
 
 
 async def test_slow_lights_dont_undo_a_press(
@@ -503,17 +518,30 @@ async def test_lights_that_never_follow_show_what_they_are_after_the_wait(
     assert hass.states.get(SCENE).state == "Bright"
 
 
-async def test_outside_change_during_the_wait_shows_once_it_ends(
+async def test_outside_change_after_arrival_shows_at_once(
     hass: HomeAssistant, area: str, freezer: FrozenDateTimeFactory
 ) -> None:
     await setup_room(hass, area)
     await call(hass, "apply_default")
-    # Someone changes the lamp before the scene has been confirmed.
+    # The lamp got to the scene, then someone changed it.
     hass.states.async_set(LAMP, "on", {"brightness": 120})
     await settle(hass, freezer)
-    assert hass.states.get(SCENE).state == "Bright"
-
-    freezer.tick(APPLY_TIMEOUT)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
     assert hass.states.get(SCENE).state == "Manual"
+
+
+async def test_change_to_arrived_light_counts_while_another_is_in_transit(
+    hass: HomeAssistant, area: str, freezer: FrozenDateTimeFactory
+) -> None:
+    await setup_room(hass, area)
+    await call(hass, "apply_default")  # Bright
+    await settle(hass, freezer)
+    lights_ignore_commands(hass, CEILING)
+
+    await call(hass, "next")  # Evening: the lamp gets to 80, the ceiling stays on
+    hass.states.async_set(LAMP, "on", {"brightness": 150})  # someone changes it
+    await settle(hass, freezer)  # the ceiling is still in transit
+    assert hass.states.get(SCENE).state == "Manual"
+
+    # A press while the ceiling is still on its way steps on from Evening.
+    await call(hass, "next")
+    assert hass.states.get(SCENE).state == "Night"

@@ -44,8 +44,8 @@ SOURCE_FOLLOW_DEFAULT: Final = "follow_default"
 SETTLE = timedelta(seconds=2)
 
 # Lights on a busy Zigbee network can take several seconds to follow a
-# command. After the integration applies a scene it keeps showing that scene
-# until the lights match it, or until this long has passed (plus any
+# command. After the integration applies a scene, each light counts as on its
+# way until it has reached its target or this long has passed (plus any
 # transition), so slow lights don't make the room look like it's still on
 # the previous scene and send the next press from the wrong place.
 APPLY_TIMEOUT = timedelta(seconds=10)

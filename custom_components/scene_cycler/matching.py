@@ -5,7 +5,7 @@ Kept free of Home Assistant objects beyond `State`, so it can be tested on its o
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterable, Mapping
+from collections.abc import Callable, Collection, Iterable, Mapping
 from dataclasses import dataclass
 
 from homeassistant.const import STATE_OFF, STATE_ON, STATE_UNAVAILABLE, STATE_UNKNOWN
@@ -72,36 +72,48 @@ def room_targets(
     return {light: OFF_TARGET for light in room_lights} | dict(targets)
 
 
+def comparable(state: State | None) -> bool:
+    """Whether a light's state can be compared to a target at all.
+
+    Lights that are missing, unavailable or unknown can't be, and a bulb
+    dropping off the network isn't someone changing the room.
+    """
+    return state is not None and state.state not in (STATE_UNAVAILABLE, STATE_UNKNOWN)
+
+
+def matches(entity_id: str, target: Target, state: State, tolerance_pct: float) -> bool:
+    """Whether a light is at its target: on/off, and brightness within tolerance."""
+    on = state.state == STATE_ON
+    if on != target.on:
+        return False
+    brightness = state.attributes.get("brightness")
+    return not (
+        on
+        and target.brightness is not None
+        and brightness is not None
+        and abs(brightness - target.brightness) > tolerance_pct * 255 / 100
+    )
+
+
 def differences(
     targets: Mapping[str, Target | None],
     get_state: Callable[[str], State | None],
     tolerance_pct: float,
+    skip: Collection[str] = (),
 ) -> list[str]:
     """Lights that don't match their target.
 
-    Lights that are missing, unavailable or unknown are skipped: they can't
-    be compared, and a bulb dropping off the network isn't someone changing
-    the room. So are lights the scene leaves unset (target None).
+    Lights that can't be compared are skipped, as are lights the scene leaves
+    unset (target None) and those in `skip`.
     """
-    tolerance = tolerance_pct * 255 / 100
-    mismatched = []
-    for entity_id, target in targets.items():
-        if target is None:
-            continue
-        state = get_state(entity_id)
-        if state is None or state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
-            continue
-        on = state.state == STATE_ON
-        if on != target.on:
-            mismatched.append(entity_id)
-        elif (
-            on
-            and target.brightness is not None
-            and (brightness := state.attributes.get("brightness")) is not None
-            and abs(brightness - target.brightness) > tolerance
-        ):
-            mismatched.append(entity_id)
-    return sorted(mismatched)
+    return sorted(
+        entity_id
+        for entity_id, target in targets.items()
+        if target is not None
+        and entity_id not in skip
+        and comparable(state := get_state(entity_id))
+        and not matches(entity_id, target, state, tolerance_pct)
+    )
 
 
 def cycle_step(

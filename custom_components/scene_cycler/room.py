@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Mapping
 from datetime import datetime, timedelta
 from typing import Any
 
@@ -38,7 +39,6 @@ from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 
 from .const import (
-    APPLY_TIMEOUT,
     CONF_AREA,
     CONF_BRIGHTNESS_TOLERANCE,
     CONF_DEFAULT_SCENE,
@@ -62,7 +62,15 @@ from .const import (
     STORAGE_VERSION,
 )
 from .lights import expand, group_members, room_lights, scene_states
-from .matching import Target, cycle_step, differences, room_targets, scene_targets
+from .matching import (
+    OFF_TARGET,
+    Target,
+    cycle_step,
+    differences,
+    room_targets,
+    scene_targets,
+)
+from .transit import Transit
 
 LIGHT_DOMAIN = "light"
 SCENE_DOMAIN = "scene"
@@ -101,10 +109,9 @@ class Room:
         self._unsubs: list[CALLBACK_TYPE] = []
         self._watched: set[str] = set()
         self._hold_until: datetime | None = None
-        # The scene (or OFF) the integration last applied, until the lights
-        # match it or _applied_until passes.
-        self._applied: str | None = None
-        self._applied_until: datetime | None = None
+        # The scene (or OFF) the integration last applied, while any of its
+        # lights are still on their way to it.
+        self._transit: Transit | None = None
         self._cancel_evaluate: CALLBACK_TYPE | None = None
 
     # Lifecycle
@@ -207,7 +214,13 @@ class Room:
         targets = self._targets(scene)
         unset = sorted(self.lights - targets.keys()) if targets is not None else []
         self.last_scene = scene
-        self._show(scene, transition, source, context)
+        self._show(
+            scene,
+            transition,
+            source,
+            context,
+            room_targets(targets, self.lights) if targets is not None else {},
+        )
         data = _transition(transition)
         await asyncio.gather(
             self.hass.services.async_call(
@@ -227,7 +240,13 @@ class Room:
         source: str = SOURCE_TURN_OFF,
     ) -> None:
         """Apply the off scene, or turn off all the room's lights if there isn't one."""
-        self._show(OFF, transition, source, context)
+        if not self.off_scene:
+            targets = dict.fromkeys(self.lights, OFF_TARGET)
+        elif (off_targets := self._targets(self.off_scene)) is not None:
+            targets = room_targets(off_targets, self.lights)
+        else:
+            targets = {}
+        self._show(OFF, transition, source, context, targets)
         data = _transition(transition)
         if self.off_scene:
             await self.hass.services.async_call(
@@ -265,7 +284,7 @@ class Room:
         target = cycle_step(
             self.scenes,
             self.default,
-            self.current,
+            self._step_from(),
             self.include_off,
             reverse,
             self.wrap,
@@ -275,6 +294,19 @@ class Room:
             await self.async_turn_off(transition, context, source)
         else:
             await self.async_apply(target, transition, context, source)
+
+    def _step_from(self) -> str | None:
+        """Where next/previous step from.
+
+        While the last apply is still on its way, that's what was applied,
+        whatever the lights show yet: someone pressing again means "the one
+        after that".
+        """
+        if self._transit is not None and self._transit.pending(
+            self.hass.states.get, dt_util.utcnow()
+        ):
+            return self._transit.applied
+        return self.current
 
     async def _turn_off_lights(
         self, lights: list[str], data: dict[str, Any], context: Context | None
@@ -294,8 +326,9 @@ class Room:
         transition: float | None,
         source: str,
         context: Context | None,
+        targets: Mapping[str, Target | None],
     ) -> None:
-        """Show what's just been applied, and hold off comparing until it lands."""
+        """Show what's just been applied, and follow its lights until they land."""
         self.hass.bus.async_fire(
             EVENT_SCENE_APPLIED,
             {
@@ -312,8 +345,12 @@ class Room:
         now = dt_util.utcnow()
         fade = timedelta(seconds=transition or 0)
         self._hold_until = now + SETTLE + fade
-        self._applied = current
-        self._applied_until = now + APPLY_TIMEOUT + fade
+        self._transit = Transit.start(
+            current,
+            {e: t for e, t in targets.items() if t is not None},
+            now,
+            transition,
+        )
         self._schedule_evaluate(self._hold_until)
         self._notify()
 
@@ -325,6 +362,12 @@ class Room:
 
     @callback
     def _on_state_changed(self, event: Event[EventStateChangedData]) -> None:
+        # Noted straight away rather than after settling, so a light that
+        # gets there and is then changed again still counts as arrived.
+        if self._transit is not None:
+            self._transit.note(
+                event.data["entity_id"], event.data["new_state"], self.tolerance
+            )
         self._schedule_evaluate(dt_util.utcnow() + SETTLE)
 
     @callback
@@ -352,6 +395,22 @@ class Room:
         self._refresh_lights()
         self._check_scenes_readable()
 
+        if (transit := self._transit) is not None:
+            get_state = self.hass.states.get
+            now = dt_util.utcnow()
+            if not (pending := transit.pending(get_state, now)):
+                self._transit = None
+            elif not differences(
+                transit.targets, get_state, self.tolerance, skip=pending
+            ):
+                # Some lights are still on their way and the rest are there:
+                # keep showing what was applied, and look again when the
+                # stragglers run out of time if nothing changes first.
+                if (when := transit.next_check(get_state, now)) is not None:
+                    self._schedule_evaluate(when)
+                self._notify()
+                return
+
         known = [
             state
             for light in self.lights
@@ -359,17 +418,9 @@ class Room:
             and state.state not in (STATE_UNAVAILABLE, STATE_UNKNOWN)
         ]
         if known:
-            current, differences = self._match(known)
-            if self._applied is not None and current != self._applied:
-                if dt_util.utcnow() < self._applied_until:
-                    # Not there yet: keep showing what was applied, and look
-                    # again when the wait runs out if nothing changes first.
-                    self._schedule_evaluate(self._applied_until)
-                    self._notify()
-                    return
-            self._applied = self._applied_until = None
+            current, mismatched = self._match(known)
             self.current = current
-            self.differences = differences
+            self.differences = mismatched
             if current not in (OFF, MANUAL):
                 self.last_scene = current
         self._notify()
