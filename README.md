@@ -96,7 +96,7 @@ With *Wrap round* off, the list is a ladder for up/down buttons instead: next st
 
 Lights that are unavailable or unknown are left out of the comparison.
 
-**How close the room is to each scene.** The scene select's `scores` attribute gives, for each scene, how far the room is from it: 0 is an exact match and 1 is entirely different. An entity in the wrong state (off instead of on) counts 1; otherwise it counts by how far its brightness or position is beyond the tolerance, as a fraction of the full range. The scene's score is the average over its entities. `closest_scene` is the scene with the lowest score, if that's at most the room's *Closest scene threshold* (0.5 by default), otherwise `null`; ties go to the scene the room last showed. A dashboard can show something like "Evening (modified)":
+**How close the room is to each scene.** The scene select's `scores` attribute gives, for each scene, how far the room is from it: 0 is an exact match and 1 is entirely different. An entity in the wrong state (off instead of on) counts 1; otherwise it counts by how far its brightness or position is beyond the tolerance, as a fraction of the full range. The scene's score is the average over its entities, rounded to two decimals. `scores` and `closest_score` aren't kept in the recorder's history, since they move with every small change. `closest_scene` is the scene with the lowest score, if that's at most the room's *Closest scene threshold* (0.5 by default), otherwise `null`; ties go to the scene the room last showed. A dashboard can show something like "Evening (modified)":
 
 ```yaml
 {{ state_attr('binary_sensor.living_room_modified', 'closest_scene') }} (modified)

@@ -81,6 +81,9 @@ class SceneSelect(_RoomSceneSelect):
     """The scene the room is showing, or Off / Manual. Choosing one applies it."""
 
     _carries_actions = True
+    # These move with every small change to a light: keep them out of the
+    # recorder's history.
+    _unrecorded_attributes = frozenset({"scores", "closest_score"})
 
     @property
     def options(self) -> list[str]:

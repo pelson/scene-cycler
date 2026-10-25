@@ -198,6 +198,24 @@ async def test_closest_scene_and_scores(
     assert attributes["closest_score"] == scores[BRIGHT]
 
 
+async def test_scores_are_rounded_and_not_recorded(
+    hass: HomeAssistant, area: str, freezer: FrozenDateTimeFactory
+) -> None:
+    await setup_room(hass, area)
+    await call(hass, "apply_default")
+    await settle(hass, freezer)
+    hass.states.async_set(LAMP, "on", {"brightness": 181})
+    await settle(hass, freezer)
+
+    state = hass.states.get(SCENE)
+    # Scores change with every small move of a light, so they're kept out of
+    # the recorder's history, and rounded so noise doesn't change them.
+    assert {"scores", "closest_score"} <= state.state_info["unrecorded_attributes"]
+    assert all(
+        score == round(score, 2) for score in state.attributes["scores"].values()
+    )
+
+
 async def test_closest_threshold(
     hass: HomeAssistant, area: str, freezer: FrozenDateTimeFactory
 ) -> None:

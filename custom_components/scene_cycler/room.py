@@ -494,12 +494,15 @@ class Room:
 
     def _update_scores(self, pending: set[str]) -> None:
         """How close the room is to each scene, leaving out what's still on its way."""
-        self.scores = {
-            scene: closeness(targets, self.hass.states.get, self.tolerances, pending)
-            if (targets := self._room_targets(scene)) is not None
-            else None
-            for scene in self.scenes
-        }
+        self.scores = {}
+        for scene in self.scenes:
+            value = None
+            if (targets := self._room_targets(scene)) is not None:
+                value = closeness(
+                    targets, self.hass.states.get, self.tolerances, pending
+                )
+            # Rounded, so a bulb's reporting noise doesn't change them.
+            self.scores[scene] = None if value is None else round(value, 2)
         self.closest = closest(
             self.scores, self.scenes, self.last_scene, self.closest_threshold
         )
