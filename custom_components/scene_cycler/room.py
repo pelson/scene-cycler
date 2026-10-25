@@ -52,19 +52,12 @@ from .const import (
     CONF_SCENES,
     CONF_WRAP,
     DOMAIN,
-    EVENT_SCENE_APPLIED,
     MANUAL,
     MANUAL_NEXT_AFTER_CLOSEST,
     OFF,
     SCOPE_AREA,
     SCOPE_SCENES,
     SETTLE,
-    SOURCE_APPLY_DEFAULT,
-    SOURCE_FOLLOW_DEFAULT,
-    SOURCE_NEXT,
-    SOURCE_PREVIOUS,
-    SOURCE_SELECT,
-    SOURCE_TURN_OFF,
     STORAGE_VERSION,
 )
 from .lights import (
@@ -233,14 +226,13 @@ class Room:
     async def async_apply_default(
         self, transition: float | None = None, context: Context | None = None
     ) -> None:
-        await self.async_apply(self.default, transition, context, SOURCE_APPLY_DEFAULT)
+        await self.async_apply(self.default, transition, context)
 
     async def async_apply(
         self,
         scene: str,
         transition: float | None = None,
         context: Context | None = None,
-        source: str = SOURCE_SELECT,
     ) -> None:
         """Apply a scene, turning off the room's lights it doesn't set."""
         if scene not in self.scenes:
@@ -259,7 +251,7 @@ class Room:
             else []
         )
         self.last_scene = scene
-        self._show(scene, transition, source, context, self._room_targets(scene) or {})
+        self._show(scene, transition, self._room_targets(scene) or {})
         data = _transition(transition)
         await asyncio.gather(
             self.hass.services.async_call(
@@ -273,10 +265,7 @@ class Room:
         )
 
     async def async_turn_off(
-        self,
-        transition: float | None = None,
-        context: Context | None = None,
-        source: str = SOURCE_TURN_OFF,
+        self, transition: float | None = None, context: Context | None = None
     ) -> None:
         """Apply the off scene, or turn off the room's lights if there isn't one.
 
@@ -290,7 +279,7 @@ class Room:
             targets = self._room_targets(self.off_scene) or {}
         else:
             targets = dict.fromkeys(switchable, OFF_TARGET)
-        self._show(OFF, transition, source, context, targets)
+        self._show(OFF, transition, targets)
         data = _transition(transition)
         if self.off_scene:
             await self.hass.services.async_call(
@@ -320,7 +309,7 @@ class Room:
         await self._async_save()
         self._notify()
         if self.follow_default and self.current == old:
-            await self.async_apply(scene, context=context, source=SOURCE_FOLLOW_DEFAULT)
+            await self.async_apply(scene, context=context)
 
     async def _async_step(
         self, reverse: bool, transition: float | None, context: Context | None
@@ -333,11 +322,10 @@ class Room:
             reverse,
             self.wrap,
         )
-        source = SOURCE_PREVIOUS if reverse else SOURCE_NEXT
         if target == OFF:
-            await self.async_turn_off(transition, context, source)
+            await self.async_turn_off(transition, context)
         else:
-            await self.async_apply(target, transition, context, source)
+            await self.async_apply(target, transition, context)
 
     def _step_from(self) -> str | None:
         """Where next/previous step from.
@@ -388,22 +376,9 @@ class Room:
         self,
         current: str,
         transition: float | None,
-        source: str,
-        context: Context | None,
         targets: Mapping[str, Target | None],
     ) -> None:
         """Show what's just been applied, and follow its lights until they land."""
-        self.hass.bus.async_fire(
-            EVENT_SCENE_APPLIED,
-            {
-                "entry_id": self.entry.entry_id,
-                "room": self.entry.title,
-                "scene": current,
-                "previous": self.current,
-                "source": source,
-            },
-            context=context,
-        )
         self.current = current
         self.differences = []
         now = dt_util.utcnow()

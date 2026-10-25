@@ -12,10 +12,7 @@ from homeassistant.helpers import (
     issue_registry as ir,
 )
 import pytest
-from pytest_homeassistant_custom_component.common import (
-    async_capture_events,
-    async_fire_time_changed,
-)
+from pytest_homeassistant_custom_component.common import async_fire_time_changed
 
 from custom_components.scene_cycler.const import (
     APPLY_TIMEOUT,
@@ -30,7 +27,6 @@ from custom_components.scene_cycler.const import (
     CONF_WRAP,
     COVER_START_GRACE,
     DOMAIN,
-    EVENT_SCENE_APPLIED,
     MANUAL_NEXT_AFTER_CLOSEST,
 )
 
@@ -278,46 +274,6 @@ async def test_after_closest_on_a_ladder(
     await settle(hass, freezer)
     await call(hass, "previous")
     assert hass.states.get(SCENE).state == "Evening"
-
-
-async def test_scene_applied_event(hass: HomeAssistant, area: str) -> None:
-    events = async_capture_events(hass, EVENT_SCENE_APPLIED)
-    await setup_room(hass, area)
-    await call(hass, "next")
-    await call(hass, "next")
-    await call(hass, "turn_off")
-    assert [
-        (e.data["scene"], e.data["previous"], e.data["source"]) for e in events
-    ] == [
-        (BRIGHT, "Off", "next"),
-        (EVENING, BRIGHT, "next"),
-        ("Off", EVENING, "turn_off"),
-    ]
-    assert events[0].data["room"] == "Living Room"
-
-
-async def test_scene_applied_event_sources(hass: HomeAssistant, area: str) -> None:
-    events = async_capture_events(hass, EVENT_SCENE_APPLIED)
-    await setup_room(hass, area, **{CONF_FOLLOW_DEFAULT: True})
-    await hass.services.async_call(
-        "select",
-        "select_option",
-        {"entity_id": SCENE, "option": "Bright"},
-        blocking=True,
-    )
-    await call(hass, "set_default", scene=EVENING)
-    await call(hass, "apply_default")
-    await hass.services.async_call(
-        "select", "select_option", {"entity_id": SCENE, "option": "Off"}, blocking=True
-    )
-    await call(hass, "previous")
-    assert [e.data["source"] for e in events] == [
-        "select",
-        "follow_default",
-        "apply_default",
-        "select",
-        "previous",
-    ]
 
 
 async def test_off_in_cycle(hass: HomeAssistant, area: str) -> None:

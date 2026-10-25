@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.1
+
+### Removed
+
+- **The `scene_cycler_scene_applied` event from 0.2.0.** Home Assistant already covers it: trigger on the room's scene select (its state is the scene the room shows, and `from` what it showed before), or on a scene entity, whose state changes whenever the scene is activated. The README shows an example.
+
 ## 0.2.0
 
 The first release of the [pelson/scene-cycler](https://github.com/pelson/scene-cycler) fork of Scene Cycler. Existing rooms keep working as before; everything new is opt-in apart from the fixes, the per-light arrival tracking, and switches, input booleans and covers now being compared.

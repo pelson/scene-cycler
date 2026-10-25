@@ -1,6 +1,6 @@
 # Scene Cycler
 
-> This is a fork of [pmaciocia/scene-cycler](https://github.com/pmaciocia/scene-cycler) by Peter Maciocia. It adds switches and covers, rooms made of what their scenes set (with or without an area), per-light arrival tracking, cycling that stops at the ends, a closest-scene score, and an event when a scene is applied; see the [changelog](CHANGELOG.md). Changes are offered back upstream.
+> This is a fork of [pmaciocia/scene-cycler](https://github.com/pmaciocia/scene-cycler) by Peter Maciocia. It adds switches and covers, rooms made of what their scenes set (with or without an area), per-light arrival tracking, cycling that stops at the ends, and a closest-scene score; see the [changelog](CHANGELOG.md). Changes are offered back upstream.
 
 A Home Assistant custom integration for room lighting scenes. Each room has an ordered list of scenes and a default:
 
@@ -42,27 +42,16 @@ Each action targets a room's scene select, its device, or its area once the devi
     scene: scene.living_room_evening
 ```
 
-## Events
+## Reacting to the room
 
-Whenever a room applies a scene or turns off itself, it fires `scene_cycler_scene_applied`. Use it for things a scene can't express, such as starting music. The event carries the context of the action that caused it.
-
-| Field | Value |
-|---|---|
-| `entry_id` | The room's config entry |
-| `room` | The room's name |
-| `scene` | The scene's entity ID, or `Off` |
-| `previous` | What the room was showing just before: a scene's entity ID, `Off`, `Manual`, or `null` if not yet known |
-| `source` | `next`, `previous`, `select`, `apply_default`, `turn_off` or `follow_default` |
-
-It isn't fired when something else changes the lights, for example an automation calling `scene.turn_on` directly.
+For things a scene can't express, such as starting music, trigger on the room's scene select: its state changes to the scene's name, `Off` or `Manual`, and `from` is what it showed before. (A scene entity's own state also changes whenever that scene is activated, by anything.)
 
 ```yaml
 # Start a playlist when the living room goes to its evening scene
 triggers:
-  - trigger: event
-    event_type: scene_cycler_scene_applied
-    event_data:
-      scene: scene.living_room_evening
+  - trigger: state
+    entity_id: select.living_room_scene
+    to: Evening
 actions:
   - action: media_player.play_media
     target:
@@ -139,7 +128,7 @@ uv run ruff check custom_components tests
 
 1. Bump `version` in `custom_components/scene_cycler/manifest.json` and `pyproject.toml`.
 2. Add a `## <version>` section to `CHANGELOG.md` describing the changes for users.
-3. Commit, then push a matching tag: `git tag -a v0.2.0 -m v0.2.0 && git push origin v0.2.0`.
+3. Commit, then push a matching tag: `git tag -a v0.2.1 -m v0.2.1 && git push origin v0.2.1`.
 
 The release workflow checks the tag matches the manifest, then creates the GitHub release that HACS installs from, with that version's changelog section as its notes.
 
