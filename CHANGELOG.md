@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.3
+
+### Changed
+
+- **Reorder scenes by dragging.** The scene list in the setup and *Configure* forms now has drag handles, so you can change the cycle order without removing scenes and adding them back. An existing room keeps its order until you save *Configure*.
+
 ## 0.2.2
 
 ### Changed

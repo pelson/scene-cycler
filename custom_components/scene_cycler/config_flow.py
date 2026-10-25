@@ -46,7 +46,10 @@ SCENES_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_SCENES): selector.EntitySelector(
             selector.EntitySelectorConfig(
-                domain="scene", integration="homeassistant", multiple=True
+                domain="scene",
+                integration="homeassistant",
+                multiple=True,
+                reorder=True,
             )
         ),
         vol.Optional(CONF_OFF_SCENE): selector.EntitySelector(SCENE_SELECTOR),
