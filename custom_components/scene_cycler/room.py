@@ -96,7 +96,8 @@ class Room:
         self.hass = hass
         self.entry = entry
         options = entry.options
-        self.area_id: str = entry.data[CONF_AREA]
+        # Only a room that's its area's lights needs an area.
+        self.area_id: str | None = entry.data.get(CONF_AREA)
         self.scope: str = entry.data.get(CONF_ROOM_SCOPE, SCOPE_AREA)
         self.scenes: list[str] = list(options[CONF_SCENES])
         self.off_scene: str | None = options.get(CONF_OFF_SCENE)

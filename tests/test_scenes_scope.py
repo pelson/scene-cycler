@@ -132,6 +132,34 @@ async def test_switch_follows_without_lag(
     assert hass.states.get(SWITCH).state == "on"
 
 
+async def test_overlapping_rooms_without_an_area(
+    hass: HomeAssistant, area: str, freezer: FrozenDateTimeFactory
+) -> None:
+    await setup_room(
+        hass,
+        None,
+        SCENES_DATA,
+        title="House",
+        **{CONF_SCENES: [THROUGH], CONF_DEFAULT_SCENE: THROUGH},
+    )
+    await setup_room(
+        hass,
+        None,
+        SCENES_DATA,
+        title="Lounge",
+        **{CONF_SCENES: [BRIGHT, EVENING], CONF_DEFAULT_SCENE: EVENING},
+    )
+    await call(hass, "apply_default", entity_id="select.lounge_scene")
+    await settle(hass, freezer)
+    assert hass.states.get("select.lounge_scene").state == "Evening"
+
+    # The house-wide scene also sets the lounge's lamp.
+    await call(hass, "apply_default", entity_id="select.house_scene")
+    await settle(hass, freezer)
+    assert hass.states.get("select.house_scene").state == "Through"
+    assert hass.states.get("select.lounge_scene").state == "Manual"
+
+
 async def test_scenes_scope_excluded_entity_is_ignored(
     hass: HomeAssistant, area: str, freezer: FrozenDateTimeFactory
 ) -> None:

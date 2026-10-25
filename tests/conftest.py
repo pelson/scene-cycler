@@ -236,14 +236,16 @@ async def area(hass: HomeAssistant, light_calls, cover_calls) -> str:
 
 async def setup_room(
     hass: HomeAssistant,
-    area_id: str,
+    area_id: str | None,
     data: dict[str, Any] | None = None,
+    title: str = "Living Room",
     **options: Any,
 ) -> MockConfigEntry:
+    """Add a room; without an area it must be made of its scenes (pass `data`)."""
     entry = MockConfigEntry(
         domain=DOMAIN,
-        title="Living Room",
-        data={CONF_AREA: area_id, **(data or {})},
+        title=title,
+        data={**({CONF_AREA: area_id} if area_id else {}), **(data or {})},
         options={
             **DEFAULT_OPTIONS,
             CONF_SCENES: [BRIGHT, EVENING, NIGHT],

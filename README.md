@@ -113,7 +113,9 @@ Copy `custom_components/scene_cycler` into `/config/custom_components/` and rest
 
 ### Set up
 
-Go to **Settings → Devices & services → Add integration → Scene Cycler** and add each room. You can change scenes, the default, excluded lights and the other settings later with the room's **Configure** button. The area is fixed; to change it, delete the room and add it again.
+Go to **Settings → Devices & services → Add integration → Scene Cycler** and add each room. You can change scenes, the default, excluded lights and the other settings later with the room's **Configure** button. What makes up the room and its area are fixed; to change them, delete the room and add it again.
+
+A room made of what its scenes set doesn't need an area, so it can be anything you cycle through scenes: a floor, or the whole house (a "calm mode" across every room). There can be several, and they can overlap: when one applies a scene, the others notice their lights changing, as for any outside change. Entity IDs follow the name you give it, such as `select.house_scene`. A room that's its area's lights needs its area, and each area can have one.
 
 The room's device isn't put in its area, because Home Assistant would then repeat the area name in the entity IDs (`select.living_room_living_room_scene`). You can assign the area afterwards; the entity IDs won't change.
 

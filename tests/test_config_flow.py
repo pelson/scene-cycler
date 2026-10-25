@@ -140,6 +140,83 @@ async def test_scenes_scope_excludes_offer_tracked_entities(
     assert result["data"][CONF_ROOM_SCOPE] == SCOPE_SCENES
 
 
+async def add_scenes_room(hass: HomeAssistant, name: str, **user_input):
+    """Add a room made of its scenes, without an area."""
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": config_entries.SOURCE_USER}
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {
+            "name": name,
+            CONF_ROOM_SCOPE: SCOPE_SCENES,
+            **SCENES_INPUT,
+            CONF_SCENES: [MOVIE],
+            **user_input,
+        },
+    )
+    assert result["step_id"] == "scenes_room"
+    return await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {
+            CONF_DEFAULT_SCENE: MOVIE,
+            CONF_BRIGHTNESS_TOLERANCE: 5,
+            CONF_POSITION_TOLERANCE: 5,
+        },
+    )
+
+
+async def test_scenes_scope_without_area(hass: HomeAssistant, area: str) -> None:
+    result = await add_scenes_room(hass, "House")
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    entry = result["result"]
+    assert entry.unique_id is None
+    assert CONF_AREA not in entry.data
+    await hass.async_block_till_done()
+    assert hass.states.get("select.house_scene") is not None
+
+
+async def test_two_scenes_entries_coexist(hass: HomeAssistant, area: str) -> None:
+    first = await add_scenes_room(hass, "House")
+    second = await add_scenes_room(hass, "Upstairs", **{CONF_AREA: area})
+    assert first["type"] is FlowResultType.CREATE_ENTRY
+    assert second["type"] is FlowResultType.CREATE_ENTRY
+    # Even with an area, a room made of its scenes doesn't claim it.
+    assert second["result"].unique_id is None
+
+
+async def test_area_scope_requires_area(hass: HomeAssistant, area: str) -> None:
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": config_entries.SOURCE_USER}
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"name": "Living Room", **SCENES_INPUT}
+    )
+    assert result["type"] is FlowResultType.FORM
+    assert result["errors"] == {CONF_AREA: "area_required"}
+
+
+async def test_options_flow_without_area(hass: HomeAssistant, area: str) -> None:
+    entry = (await add_scenes_room(hass, "House"))["result"]
+    await hass.async_block_till_done()
+
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {**SCENES_INPUT, CONF_SCENES: [MOVIE, BRIGHT]}
+    )
+    assert result["step_id"] == "scenes_room"
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"],
+        {
+            CONF_DEFAULT_SCENE: BRIGHT,
+            CONF_BRIGHTNESS_TOLERANCE: 5,
+            CONF_POSITION_TOLERANCE: 5,
+        },
+    )
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert entry.options[CONF_SCENES] == [MOVIE, BRIGHT]
+
+
 async def test_off_scene_cannot_be_in_cycle(hass: HomeAssistant, area: str) -> None:
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}

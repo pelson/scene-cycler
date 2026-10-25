@@ -147,16 +147,27 @@ class SceneCyclerConfigFlow(ConfigFlow, domain=DOMAIN):
     ) -> ConfigFlowResult:
         errors: dict[str, str] = {}
         if user_input is not None:
-            await self.async_set_unique_id(user_input[CONF_AREA])
-            self._abort_if_unique_id_configured()
-            if not (errors := _validate_scenes(user_input)):
+            scope = user_input[CONF_ROOM_SCOPE]
+            area_id = user_input.get(CONF_AREA)
+            # Only a room that's its area's lights uses the area, and it's
+            # one per area. A room made of its scenes can be anything, a
+            # floor or the whole house, and several can overlap.
+            if scope == SCOPE_AREA:
+                if not area_id:
+                    errors = {CONF_AREA: "area_required"}
+                else:
+                    await self.async_set_unique_id(area_id)
+                    self._abort_if_unique_id_configured()
+            if not errors and not (errors := _validate_scenes(user_input)):
                 self._data = {
                     CONF_NAME: user_input[CONF_NAME],
-                    CONF_AREA: user_input[CONF_AREA],
-                    CONF_ROOM_SCOPE: user_input[CONF_ROOM_SCOPE],
+                    CONF_ROOM_SCOPE: scope,
+                    **({CONF_AREA: area_id} if scope == SCOPE_AREA else {}),
                 }
                 self._options = {
-                    k: v for k, v in user_input.items() if k not in self._data
+                    k: v
+                    for k, v in user_input.items()
+                    if k not in (CONF_NAME, CONF_ROOM_SCOPE, CONF_AREA)
                 }
                 return await self.async_step_room()
 
@@ -164,7 +175,7 @@ class SceneCyclerConfigFlow(ConfigFlow, domain=DOMAIN):
             {
                 vol.Required(CONF_NAME): selector.TextSelector(),
                 vol.Required(CONF_ROOM_SCOPE, default=SCOPE_AREA): SCOPE_SELECTOR,
-                vol.Required(CONF_AREA): selector.AreaSelector(),
+                vol.Optional(CONF_AREA): selector.AreaSelector(),
             }
         ).extend(SCENES_SCHEMA.schema)
         return self.async_show_form(
